@@ -1,0 +1,116 @@
+{
+    "name": "01_Lead_Ingest_100X",
+    "nodes": [
+        {
+            "parameters": {
+                "path": "webhook-test",
+                "options": {}
+            },
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "functionCode": "// 100X VALIDATION LOGIC\nconst phone = items[0].json.phone || items[0].json.phoneNumber || '';\nconst email = items[0].json.email || '';\nconst name = items[0].json.name || '';\n\n// 1. Phone Regex (E.164-ish)\nconst phoneValid = /^\\+?[1-9]\\d{1,14}$/.test(phone.replace(/[^0-9+]/g, ''));\n\n// 2. Spam Trap\nconst isSpam = name.toLowerCase().includes('test') || email.includes('example.com');\n\nreturn {\n  json: {\n    lead_id: 'gen_' + Math.floor(Math.random() * 100000),\n    first_name: name.split(' ')[0],\n    last_name: name.split(' ').slice(1).join(' '),\n    email: email,\n    phone: phone,\n    is_valid: phoneValid && !isSpam,\n    reject_reason: !phoneValid ? 'Bad Phone' : (isSpam ? 'Spam' : null),\n    timestamp: new Date().toISOString()\n  }\n};"
+            },
+            "name": "Validate & Cleaning",
+            "type": "n8n-nodes-base.function",
+            "typeVersion": 1,
+            "position": [
+                450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{$node[\"Validate & Cleaning\"].json[\"is_valid\"]}}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "name": "Is Valid?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                650,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "workflowId": "router-sync-workflow-id"
+            },
+            "name": "Execute Routing",
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1,
+            "position": [
+                850,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "channel": "junk-leads",
+                "text": "⚠️ Rejected Lead: {{$node[\"Validate & Cleaning\"].json[\"email\"]}} - Reason: {{$node[\"Validate & Cleaning\"].json[\"reject_reason\"]}}"
+            },
+            "name": "Log Rejection",
+            "type": "n8n-nodes-base.slack",
+            "typeVersion": 1,
+            "position": [
+                850,
+                400
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Validate & Cleaning",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Validate & Cleaning": {
+            "main": [
+                [
+                    {
+                        "node": "Is Valid?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Is Valid?": {
+            "main": [
+                [
+                    {
+                        "node": "Execute Routing",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Log Rejection",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

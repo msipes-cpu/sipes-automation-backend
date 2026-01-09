@@ -1,0 +1,145 @@
+{
+    "name": "02_Router_and_Sync",
+    "nodes": [
+        {
+            "parameters": {},
+            "name": "Start",
+            "type": "n8n-nodes-base.start",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://api.apollo.io/v1/people/match",
+                "authentication": "headerAuth",
+                "requestMethod": "POST",
+                "options": {},
+                "bodyParametersJson": "{ \"email\": \"{{$node[\"Start\"].json[\"email\"]}}\" }"
+            },
+            "name": "Enrich (Apollo)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                500,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "modelId": "gpt-4-turbo",
+                "prompt": "Write a 1-sentence friendly SMS intro for {{$node[\"Start\"].json[\"first_name\"]}} from {{$node[\"Start\"].json[\"company\"]}}. Mention we help their industry.",
+                "maxTokens": 60
+            },
+            "name": "AI Draft Intro",
+            "type": "n8n-nodes-base.openAi",
+            "typeVersion": 1,
+            "position": [
+                500,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "wait"
+            },
+            "name": "Merge Parallel",
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 1,
+            "position": [
+                700,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "functionCode": "// SCORE & ROUTING LOGIC\nconst data = items[0].json;\nconst rev = parseInt(data.organization?.annual_revenue_printed?.replace(/[^0-9]/g, '') || '0');\nconst isWhale = rev > 5000000;\n\n// Assign Calendar based on Score\nconst seniorCal = 'https://calendly.com/senior-rep/30min';\nconst juniorCal = 'https://calendly.com/junior-rep/15min';\n\nreturn {\n  json: {\n    ...data,\n    is_whale: isWhale,\n    lead_score: isWhale ? 100 : 10,\n    calendar_link: isWhale ? seniorCal : juniorCal,\n    ai_intro: data.response || 'Hi! Saw your inquiry.'\n  }\n};"
+            },
+            "name": "Score & Route",
+            "type": "n8n-nodes-base.function",
+            "typeVersion": 1,
+            "position": [
+                900,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "workflowId": "communications-workflow-id"
+            },
+            "name": "Execute Comms",
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1,
+            "position": [
+                1100,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Start": {
+            "main": [
+                [
+                    {
+                        "node": "Enrich (Apollo)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "AI Draft Intro",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Enrich (Apollo)": {
+            "main": [
+                [
+                    {
+                        "node": "Merge Parallel",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Draft Intro": {
+            "main": [
+                [
+                    {
+                        "node": "Merge Parallel",
+                        "type": "main",
+                        "index": 1
+                    }
+                ]
+            ]
+        },
+        "Merge Parallel": {
+            "main": [
+                [
+                    {
+                        "node": "Score & Route",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Score & Route": {
+            "main": [
+                [
+                    {
+                        "node": "Execute Comms",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

@@ -1,0 +1,119 @@
+{
+    "name": "04_Backup_Watchdog",
+    "nodes": [
+        {
+            "parameters": {},
+            "name": "Start",
+            "type": "n8n-nodes-base.start",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "amount": 15,
+                "unit": "minutes"
+            },
+            "name": "Wait 15m",
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1,
+            "position": [
+                450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://api.crm-provider.com/v1/contacts/{{$node[\"Start\"].json[\"lead_id\"]}}",
+                "options": {}
+            },
+            "name": "Check Status",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                650,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "string": [
+                        {
+                            "value1": "={{$node[\"Check Status\"].json[\"status\"]}}",
+                            "value2": "New Lead"
+                        }
+                    ]
+                }
+            },
+            "name": "Still New?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                850,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "channel": "manager-alerts",
+                "text": "⚠️ ALERT: Lead {{$node[\"Start\"].json[\"name\"]}} ignored for 15 mins!"
+            },
+            "name": "Notify Manager",
+            "type": "n8n-nodes-base.slack",
+            "typeVersion": 1,
+            "position": [
+                1050,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Start": {
+            "main": [
+                [
+                    {
+                        "node": "Wait 15m",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Wait 15m": {
+            "main": [
+                [
+                    {
+                        "node": "Check Status",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Check Status": {
+            "main": [
+                [
+                    {
+                        "node": "Still New?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Still New?": {
+            "main": [
+                [
+                    {
+                        "node": "Notify Manager",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

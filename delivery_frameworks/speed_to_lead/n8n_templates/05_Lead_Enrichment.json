@@ -1,0 +1,128 @@
+{
+    "name": "05_Lead_Enrichment",
+    "nodes": [
+        {
+            "parameters": {},
+            "name": "Start",
+            "type": "n8n-nodes-base.start",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://api.apollo.io/v1/people/match",
+                "authentication": "headerAuth",
+                "requestMethod": "POST",
+                "jsonParameters": true,
+                "options": {},
+                "bodyParametersJson": "{ \"email\": \"{{$node[\"Start\"].json[\"email\"]}}\" }"
+            },
+            "name": "Apollo Lookup",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                450,
+                300
+            ],
+            "credentials": {
+                "httpHeaderAuth": {
+                    "id": "apollo-api-key",
+                    "name": "Apollo API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "functionCode": "const data = items[0].json.person || {};\nconst org = items[0].json.organization || {};\nreturn {\n  json: {\n    ...$node[\"Start\"].json,\n    job_title: data.title || 'Unknown',\n    company_name: org.name || 'Unknown',\n    linkedin_url: data.linkedin_url || '',\n    revenue_range: org.annual_revenue || 'Unknown',\n    is_qualified: org.annual_revenue ? true : false\n  }\n};"
+            },
+            "name": "Format Data",
+            "type": "n8n-nodes-base.function",
+            "typeVersion": 1,
+            "position": [
+                650,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{$node[\"Format Data\"].json[\"is_qualified\"]}}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "name": "Qualified?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                850,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "channel": "high-value-leads",
+                "text": "💰 *HIGH VALUE LEAD DETECTED*\nName: {{$node[\"Format Data\"].json[\"first_name\"]}}\nTitle: {{$node[\"Format Data\"].json[\"job_title\"]}}\nRev: {{$node[\"Format Data\"].json[\"revenue_range\"]}}\nLinkedIn: {{$node[\"Format Data\"].json[\"linkedin_url\"]}}\n\n*System Triggering Instant Call...*"
+            },
+            "name": "Priority Alert",
+            "type": "n8n-nodes-base.slack",
+            "typeVersion": 1,
+            "position": [
+                1050,
+                200
+            ]
+        }
+    ],
+    "connections": {
+        "Start": {
+            "main": [
+                [
+                    {
+                        "node": "Apollo Lookup",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Apollo Lookup": {
+            "main": [
+                [
+                    {
+                        "node": "Format Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Format Data": {
+            "main": [
+                [
+                    {
+                        "node": "Qualified?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Qualified?": {
+            "main": [
+                [
+                    {
+                        "node": "Priority Alert",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

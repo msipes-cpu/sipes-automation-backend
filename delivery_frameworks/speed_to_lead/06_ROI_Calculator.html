@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Cost of Waiting | Speed-to-Lead ROI</title>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-gradient: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text-main: #0f172a;
+            --text-secondary: #64748b;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background: var(--surface);
+            border-radius: 24px;
+            box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.05), 0 8px 16px -6px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 500px;
+            padding: 40px;
+            transition: transform 0.3s ease;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            margin: 0 0 0.5rem 0;
+            background: -webkit-linear-gradient(315deg, #1e293b 0%, #334155 74%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin: 0;
+        }
+
+        .control-group {
+            margin-bottom: 2rem;
+        }
+
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+
+        .output-value {
+            font-family: 'Monaco', 'Consolas', monospace;
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 1rem;
+            background: #eff6ff;
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+
+        /* Custom Range Input */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 2px solid var(--primary);
+            cursor: pointer;
+            margin-top: -10px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.1s;
+        }
+
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #e2e8f0;
+            border-radius: 2px;
+        }
+
+        input[type=range]:focus::-webkit-slider-thumb {
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        }
+
+        /* Results Section */
+        .results-container {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-item {
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .result-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .result-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .result-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            line-height: 1;
+            transition: color 0.3s ease;
+        }
+
+        .result-number.negative {
+            color: var(--error);
+        }
+
+        .result-number.positive {
+            color: var(--success);
+        }
+
+        .toggle-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: 12px;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .scenario-btn {
+            border: none;
+            background: transparent;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .scenario-btn.active {
+            background: var(--surface);
+            color: var(--text-main);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+
+        .badge.conservative {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge.optimistic {
+            background: #dcfce7;
+            color: #166534;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Speed-to-Lead ROI</h1>
+            <p class="subtitle">Calculate the revenue leaking from your funnel.</p>
+        </header>
+
+        <div class="toggle-container">
+            <button class="scenario-btn active" onclick="setScenario('conservative')">Conservative Estimate</button>
+            <button class="scenario-btn" onclick="setScenario('optimistic')">Based on Data (Velocify)</button>
+        </div>
+
+        <!-- Inputs -->
+        <div class="control-group">
+            <div class="label-row">
+                <label>Monthly Leads</label>
+                <div class="output-value" id="disp_leads">50</div>
+            </div>
+            <input type="range" id="leads" min="10" max="1000" step="10" value="50" oninput="update()">
+        </div>
+
+        <div class="control-group">
+            <div class="label-row">
+                <label>Deal Value (LTV)</label>
+                <div class="output-value" id="disp_deal">$2,000</div>
+            </div>
+            <input type="range" id="deal" min="500" max="25000" step="500" value="2000" oninput="update()">
+        </div>
+
+        <div class="control-group">
+            <div class="label-row">
+                <label>Current Close Rate</label>
+                <div class="output-value" id="disp_close">10%</div>
+            </div>
+            <input type="range" id="close" min="1" max="50" step="0.5" value="10" oninput="update()">
+        </div>
+
+        <!-- Output -->
+        <div class="results-container">
+            <div class="result-item">
+                <div class="result-label">Monthly Revenue Lost</div>
+                <div class="result-number negative" id="lost_revenue">$0</div>
+                <div class="badge conservative" id="badge_text">Assuming 50% Lift</div>
+            </div>
+
+            <div style="border-top: 1px dashed #cbd5e1; margin: 1.5rem 0;"></div>
+
+            <div class="result-item">
+                <div class="result-label">Annual Opportunity Cost</div>
+                <div class="result-number negative" style="font-size: 1.75rem;" id="annual_lost">$0</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // State
+        let scenario = 'conservative';
+        // Conservative = 50% lift in conversion rate on reachable leads
+        // Optimistic = 391% lift (Velocify study: 1 min vs >24 hours)
+
+        function setScenario(type) {
+            scenario = type;
+            document.querySelectorAll('.scenario-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            const badge = document.getElementById('badge_text');
+            if (type === 'conservative') {
+                badge.className = 'badge conservative';
+                badge.textContent = 'Assuming 50% Lift';
+            } else {
+                badge.className = 'badge optimistic';
+                badge.textContent = 'Based on 391% Lift (Velocify)';
+            }
+            update();
+        }
+
+        function formatCurrency(num) {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(num);
+        }
+
+        function update() {
+            // Get Values
+            const leads = parseInt(document.getElementById('leads').value);
+            const deal = parseInt(document.getElementById('deal').value);
+            const closeRate = parseFloat(document.getElementById('close').value) / 100;
+
+            // Update Displays
+            document.getElementById('disp_leads').textContent = leads;
+            document.getElementById('disp_deal').textContent = formatCurrency(deal);
+            document.getElementById('disp_close').textContent = (closeRate * 100).toFixed(1) + '%';
+
+            // Calculations
+            // Base Revenue
+            const currentWins = leads * closeRate;
+            const currentRevenue = currentWins * deal;
+
+            // Scenario Lift
+            // "Speed to Lead" means we contact leads instantly.
+            // Data shows this increases conversion by up to 391%. 
+            // Conservative estimate: 50% increase in close rate due to contact rate doubling.
+
+            const liftFactor = scenario === 'conservative' ? 0.50 : 3.91;
+
+            const newCloseRate = Math.min(closeRate * (1 + liftFactor), 1.0); // Cap at 100%
+            const newWins = leads * newCloseRate;
+            const newRevenue = newWins * deal;
+
+            const lostMonthly = newRevenue - currentRevenue;
+            const lostAnnual = lostMonthly * 12;
+
+            // Animate Numbers (Simple text update for now, can add countUp.js if needed)
+            document.getElementById('lost_revenue').textContent = formatCurrency(lostMonthly);
+            document.getElementById('annual_lost').textContent = formatCurrency(lostAnnual);
+        }
+
+        // Init
+        update();
+    </script>
+</body>
+
+</html>

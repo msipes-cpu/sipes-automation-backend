@@ -1,0 +1,271 @@
+{
+    "name": "03_Communications",
+    "nodes": [
+        {
+            "parameters": {},
+            "name": "Start",
+            "type": "n8n-nodes-base.start",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "from": "+15550000000",
+                "to": "={{$node[\"Start\"].json[\"phone\"]}}",
+                "message": "={{$node[\"Start\"].json[\"ai_intro\"]}} Book a time here: {{$node[\"Start\"].json[\"calendar_link\"]}}"
+            },
+            "name": "SMS 1 (Instant)",
+            "type": "n8n-nodes-base.twilio",
+            "typeVersion": 1,
+            "position": [
+                450,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "to": "={{$node[\"Start\"].json[\"email\"]}}",
+                "subject": "Booking Link for {{$node[\"Start\"].json[\"first_name\"]}}",
+                "text": "Hi {{$node[\"Start\"].json[\"first_name\"]}},\n\nThanks for reaching out. Pick a time here: {{$node[\"Start\"].json[\"calendar_link\"]}}"
+            },
+            "name": "Email 1 (Instant)",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 1,
+            "position": [
+                450,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "amount": 5,
+                "unit": "minutes"
+            },
+            "name": "Wait 5m",
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1,
+            "position": [
+                650,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "functionCode": "// Mock Check\n// In reality, search CRM for 'Meeting Booked' tag\nreturn { json: { booked: false } };"
+            },
+            "name": "Create Mock Status",
+            "type": "n8n-nodes-base.function",
+            "typeVersion": 1,
+            "position": [
+                800,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{$node[\"Create Mock Status\"].json[\"booked\"]}}",
+                            "value2": false
+                        }
+                    ]
+                }
+            },
+            "name": "Not Booked?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                950,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "from": "+15550000000",
+                "to": "={{$node[\"Start\"].json[\"phone\"]}}",
+                "message": "Hi {{$node[\"Start\"].json[\"first_name\"]}}, did you see the link? {{$node[\"Start\"].json[\"calendar_link\"]}}"
+            },
+            "name": "SMS 2 (5m Nudge)",
+            "type": "n8n-nodes-base.twilio",
+            "typeVersion": 1,
+            "position": [
+                1150,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "amount": 1,
+                "unit": "hours"
+            },
+            "name": "Wait 1h",
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1,
+            "position": [
+                1150,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "to": "={{$node[\"Start\"].json[\"email\"]}}",
+                "subject": "Still interested?",
+                "text": "Sent you a link earlier: {{$node[\"Start\"].json[\"calendar_link\"]}}"
+            },
+            "name": "Email 2 (1h Nudge)",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 1,
+            "position": [
+                1350,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "amount": 24,
+                "unit": "hours"
+            },
+            "name": "Wait 24h",
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1,
+            "position": [
+                1550,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "from": "+15550000000",
+                "to": "={{$node[\"Start\"].json[\"phone\"]}}",
+                "message": "Last try! Calendar is open if you need us: {{$node[\"Start\"].json[\"calendar_link\"]}}"
+            },
+            "name": "SMS 3 (Final)",
+            "type": "n8n-nodes-base.twilio",
+            "typeVersion": 1,
+            "position": [
+                1750,
+                400
+            ]
+        }
+    ],
+    "connections": {
+        "Start": {
+            "main": [
+                [
+                    {
+                        "node": "SMS 1 (Instant)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Email 1 (Instant)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "SMS 1 (Instant)": {
+            "main": [
+                [
+                    {
+                        "node": "Wait 5m",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Email 1 (Instant)": {
+            "main": [
+                [
+                    {
+                        "node": "Wait 5m",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Wait 5m": {
+            "main": [
+                [
+                    {
+                        "node": "Create Mock Status",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Create Mock Status": {
+            "main": [
+                [
+                    {
+                        "node": "Not Booked?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Not Booked?": {
+            "main": [
+                [
+                    {
+                        "node": "SMS 2 (5m Nudge)",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Wait 1h",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Wait 1h": {
+            "main": [
+                [
+                    {
+                        "node": "Email 2 (1h Nudge)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Email 2 (1h Nudge)": {
+            "main": [
+                [
+                    {
+                        "node": "Wait 24h",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Wait 24h": {
+            "main": [
+                [
+                    {
+                        "node": "SMS 3 (Final)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

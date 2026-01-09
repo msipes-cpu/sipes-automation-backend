@@ -1,0 +1,43 @@
+{
+    "name": "06_Ad_Platform_Feedback",
+    "nodes": [
+        {
+            "parameters": {},
+            "name": "Start",
+            "type": "n8n-nodes-base.start",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://graph.facebook.com/v15.0/{{pixel_id}}/events",
+                "requestMethod": "POST",
+                "authentication": "headerAuth",
+                "bodyParametersJson": "{ \"data\": [ { \"event_name\": \"Lead\", \"event_time\": {{$year}} , \"action_source\": \"website\", \"user_data\": { \"em\": [ \"{{$node[\"Start\"].json[\"email_hash\"]}}\" ], \"ph\": [ \"{{$node[\"Start\"].json[\"phone_hash\"]}}\" ] }, \"custom_data\": { \"value\": {{$node[\"Start\"].json[\"lead_score\"]}}, \"currency\": \"USD\" } } ] }"
+            },
+            "name": "Facebook CAPI",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                450,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Start": {
+            "main": [
+                [
+                    {
+                        "node": "Facebook CAPI",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

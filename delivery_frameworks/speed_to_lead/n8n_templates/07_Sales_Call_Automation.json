@@ -1,0 +1,203 @@
+{
+    "name": "07_Sales_Call_Automation",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "fathom-webhook",
+                "options": {}
+            },
+            "name": "Fathom Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "functionCode": "// Extract Attendee Email from Fathom Payload\n// This is a placeholder. Adjust based on actual Fathom payload struct.\nconst attendees = items[0].json.body.attendees || [];\n// Assume first non-host is the target, or iterate all.\n\nreturn attendees.map(a => ({ json: { email: a.email } }));"
+            },
+            "name": "Extract Emails",
+            "type": "n8n-nodes-base.function",
+            "typeVersion": 1,
+            "position": [
+                450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "contact",
+                "operation": "getAll",
+                "additionalFields": {
+                    "query": "={{$json[\"email\"]}}"
+                }
+            },
+            "name": "GHL Lookup",
+            "type": "n8n-nodes-base.goHighLevel",
+            "typeVersion": 1,
+            "position": [
+                650,
+                300
+            ],
+            "credentials": {
+                "goHighLevelApi": {
+                    "id": "YOUR_GHL_CREDENTIAL_ID",
+                    "name": "GoHighLevel Account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{$json[\"opportunities\"].length > 0}}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "name": "In Sales Pipeline?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                850,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "model": "gpt-4",
+                "prompt": {
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are a sales assistant. Your goal is to summarize the following sales call transcript and generate a D100 Asset.\n\nHere are examples of how I want you to write:\n[INSERT GOLDEN DATASET HERE]"
+                        },
+                        {
+                            "role": "user",
+                            "content": "Transcript: {{$node[\"Fathom Webhook\"].json[\"body\"][\"transcript\"]}}"
+                        }
+                    ]
+                }
+            },
+            "name": "AI Summarization",
+            "type": "n8n-nodes-base.openAi",
+            "typeVersion": 1,
+            "position": [
+                1050,
+                200
+            ],
+            "credentials": {
+                "openAiApi": {
+                    "id": "YOUR_OPENAI_CREDENTIAL_ID",
+                    "name": "OpenAI Account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "operation": "update",
+                "fileId": "TEMPLATE_DOC_ID",
+                "updateBody": true,
+                "content": "={{$json[\"message\"][\"content\"]}}"
+            },
+            "name": "Create GDoc Asset",
+            "type": "n8n-nodes-base.googleDocs",
+            "typeVersion": 1,
+            "position": [
+                1250,
+                200
+            ],
+            "notes": "Placeholder: This should copy the template first, then update it."
+        },
+        {
+            "parameters": {
+                "resource": "contact",
+                "operation": "update",
+                "contactId": "={{$node[\"GHL Lookup\"].json[\"id\"]}}",
+                "additionalFields": {
+                    "notes": "Auto-Generated D100 Asset: {{$node[\"Create GDoc Asset\"].json[\"webViewLink\"]}}"
+                }
+            },
+            "name": "Update GHL Contact",
+            "type": "n8n-nodes-base.goHighLevel",
+            "typeVersion": 1,
+            "position": [
+                1450,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Fathom Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Extract Emails",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extract Emails": {
+            "main": [
+                [
+                    {
+                        "node": "GHL Lookup",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "GHL Lookup": {
+            "main": [
+                [
+                    {
+                        "node": "In Sales Pipeline?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "In Sales Pipeline?": {
+            "main": [
+                [
+                    {
+                        "node": "AI Summarization",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Summarization": {
+            "main": [
+                [
+                    {
+                        "node": "Create GDoc Asset",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Create GDoc Asset": {
+            "main": [
+                [
+                    {
+                        "node": "Update GHL Contact",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

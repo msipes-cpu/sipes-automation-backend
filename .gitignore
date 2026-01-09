@@ -1,0 +1,17 @@
+.env
+.env.local
+.venv
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+.tmp/
+credentials.json
+token.json
+dist/
+build/
+coverage/
+*.log
+marketing/*.csv
+leads_*.csv
+automation.db

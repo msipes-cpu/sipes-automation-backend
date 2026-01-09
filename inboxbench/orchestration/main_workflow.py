@@ -1,68 +1,85 @@
 import sys
 import os
-import logging
 import json
+import logging
 from datetime import datetime
 
-# Add parent dir to path
+# Add project root to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from lib.utils import load_config, setup_logging
 from execution.generate_client_report import generate_client_report
 from execution.send_email_report import send_email_report
-from execution.update_google_sheet import update_google_sheet
+from execution.update_google_sheet import update_client_sheet
 from execution.send_slack_notification import send_slack_notification
 
-def main():
-    setup_logging()
-    logging.info("Starting InboxBench Automation Workflow (V2+Resend)...")
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-    config = load_config()
-    if not config:
-        sys.exit(1)
+def load_config():
+    config_path = os.path.join(os.path.dirname(__file__), '../config/config.json')
+    with open(config_path, 'r') as f:
+        return json.load(f)
 
-    api_key = config.get("instantly_api_key")
-    client_tags = config.get("client_tags", [])
+def run_workflow():
+    logging.info("Starting InboxBench Daily Workflow...")
     
-    full_report = {
-        "date": datetime.now().isoformat(),
-        "client_reports": []
-    }
-    
-    logging.info(f"Processing {len(client_tags)} clients...")
-    for client_profile in client_tags:
-        try:
-            client_report = generate_client_report(api_key, client_profile, None)
-            full_report["client_reports"].append(client_report)
-        except Exception as e:
-            logging.error(f"Error generating report for {client_profile.get('client_name')}: {e}")
-
-    # Generate Outputs
-    if config.get("reporting_email"):
-        logging.info("Sending Email Report...")
-        # Updated to pass resend_api_key
-        send_email_report(
-            config.get("resend_api_key"),
-            config.get("reporting_email"),
-            config.get("agency_name"),
-            full_report
-        )
+    try:
+        config = load_config()
         
-    if config.get("google_sheet_id") and config.get("google_sheet_id") != "YOUR_GOOGLE_SHEET_ID":
-        logging.info("Updating Google Sheet...")
-        update_google_sheet(
-            config.get("google_sheet_id"),
-            full_report
-        )
+        # 1. Setup
+        client_profiles = config.get('client_profiles', [])
+        instantly_api_key = config.get('instantly_api_key')
         
-    if config.get("slack_webhook_url") and config.get("slack_webhook_url") != "YOUR_SLACK_WEBHOOK_URL":
-        logging.info("Sending Slack Notification...")
-        send_slack_notification(
-            config.get("slack_webhook_url"),
-            full_report
-        )
+        if not client_profiles:
+            logging.error("No client profiles found in config. Aborting.")
+            return
 
-    logging.info("Workflow completed.")
+        all_reports = []
+        
+        # 2. Iterate each client
+        for profile in client_profiles:
+            tag_name = profile.get('tag_name')
+            client_name = profile.get('client_name')
+            google_sheet_id = profile.get('google_sheet_id')
+            
+            logging.info(f"Processing client: {client_name} (Tag: {tag_name})")
+            
+            # 3. Generate individual report
+            client_report = generate_client_report(instantly_api_key, tag_name, client_name)
+            
+            # 4. Update Client's Google Sheet
+            if google_sheet_id:
+                logging.info(f"Updating Google Sheet for {client_name}...")
+                success = update_client_sheet(client_report, google_sheet_id)
+                if success:
+                    logging.info("Sheet update successful.")
+                else:
+                    logging.error("Sheet update failed.")
+            else:
+                logging.warning(f"No Google Sheet ID for {client_name}, skipping sheet update.")
+
+            all_reports.append(client_report)
+
+        # 5. Send Consolidated Email Summary
+        if all_reports:
+            logging.info("Sending consolidated email report via Resend...")
+            resend_api_key = config.get('resend_api_key')
+            recipient = config.get('reporting_email')
+            agency_name = config.get('agency_name', 'My Agency')
+            
+            # Wrap in expected structure
+            full_report = {"client_reports": all_reports}
+            
+            if resend_api_key and recipient:
+                send_email_report(resend_api_key, recipient, agency_name, full_report)
+            else:
+                 logging.error("Resend API Key or Recipient missing. Cannot send email.")
+
+        logging.info("Workflow completed successfully.")
+        
+    except Exception as e:
+        logging.error(f"Workflow failed: {e}")
+        # Optional: Send failure notification via Slack
 
 if __name__ == "__main__":
-    main()
+    run_workflow()
