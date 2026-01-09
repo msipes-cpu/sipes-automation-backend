@@ -52,11 +52,29 @@ async def startup_event():
     # Initialize DB
     init_db()
     
-    # Start Telegram Bot in a separate process
-    # We check for the token inside run_telegram_bot, so safe to call.
-    bot_process = multiprocessing.Process(target=run_telegram_bot, daemon=True)
-    bot_process.start()
-    print(f"Telegram Bot started with PID: {bot_process.pid}")
+    # Start Telegram Bot (Async)
+    try:
+        from backend.telegram_bot import get_bot_application
+    except ImportError:
+        from telegram_bot import get_bot_application
+        
+    bot_app = await get_bot_application()
+    if bot_app:
+        await bot_app.initialize()
+        await bot_app.start()
+        await bot_app.updater.start_polling()
+        app.state.bot_app = bot_app
+        print("Telegram Bot started successfully (Async)")
+    else:
+        print("Telegram Bot failed to start (No Token?)")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    if hasattr(app.state, "bot_app") and app.state.bot_app:
+        print("Stopping Telegram Bot...")
+        await app.state.bot_app.updater.stop()
+        await app.state.bot_app.stop()
+        await app.state.bot_app.shutdown()
 
 # --- Models ---
 

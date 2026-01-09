@@ -61,10 +61,11 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_text = f"I received: {user_text}\n(LLM connection coming soon!)"
     await context.bot.send_message(chat_id=update.effective_chat.id, text=reply_text)
 
-def run_telegram_bot():
+
+async def get_bot_application():
     if not TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN is missing in .env")
-        return
+        return None
 
     application = ApplicationBuilder().token(TOKEN).build()
     
@@ -73,8 +74,9 @@ def run_telegram_bot():
     application.add_handler(CommandHandler('status', status))
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), echo))
     
-    logger.info("Telegram Bot is starting polling...")
-    application.run_polling()
+    return application
 
 if __name__ == '__main__':
+    # Local testing convenience
+    run_telegram_bot = lambda: ApplicationBuilder().token(TOKEN).build().run_polling()
     run_telegram_bot()
