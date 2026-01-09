@@ -1,0 +1,41 @@
+[
+    {
+        "client_name": "Example Client",
+        "client_id": "client_001",
+        "enabled_automations": [
+            "lead_orchestration"
+        ],
+        "instantly_api_key": "YOUR_API_KEY",
+        "reporting_email": "client@example.com",
+        "target_job_titles": [
+            "CEO",
+            "Founder"
+        ],
+        "target_locations": [
+            "United States"
+        ],
+        "target_industries": [
+            "Marketing and Advertising"
+        ],
+        "lead_limit": 100,
+        "spreadsheet_id": ""
+    },
+    {
+        "client_name": "Malak Bardor",
+        "client_id": "client_malak",
+        "enabled_automations": [],
+        "instantly_api_key": "ENTER_MALAK_API_KEY",
+        "reporting_email": "malak@automathiq.com",
+        "target_job_titles": [
+            "Decision Maker"
+        ],
+        "target_locations": [
+            "United States"
+        ],
+        "target_industries": [
+            "General"
+        ],
+        "lead_limit": 100,
+        "spreadsheet_id": "ENTER_SPREADSHEET_ID"
+    }
+]

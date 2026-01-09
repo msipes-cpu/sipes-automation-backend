@@ -1,0 +1,19 @@
+{
+    "instantly_api_key": "YTA5NTM0NzgtZTgzNC00OGFmLWJlZmMtNzdiMzkxZDg1ZGE2OkdFcEZHcFhZbFd6cA==",
+    "agency_name": "Sipes Automation",
+    "reporting_email": "msipes@sipesautomation.com",
+    "google_sheet_id": "YOUR_GOOGLE_SHEET_ID",
+    "slack_webhook_url": "YOUR_SLACK_WEBHOOK_URL",
+    "smtp_config": {
+        "server": "smtp.example.com",
+        "port": 587,
+        "user": "your_email@example.com",
+        "password": "your_password"
+    },
+    "client_tags": [
+        {
+            "tag": "Sipes Automation",
+            "client_name": "Sipes Automation (Internal)"
+        }
+    ]
+}

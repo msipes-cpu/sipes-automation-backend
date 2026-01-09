@@ -1,0 +1,14 @@
+.git
+.env
+.env.local
+.venv
+node_modules
+__pycache__
+.DS_Store
+*.pyc
+*.pyo
+.tmp
+marketing/*.csv
+dist
+build
+coverage
