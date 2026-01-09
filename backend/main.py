@@ -11,11 +11,7 @@ from datetime import datetime
 
 # Add current directory to sys.path to ensure module resolution
 sys.path.append(os.getcwd())
-try:
-    from backend.telegram_bot import run_telegram_bot
-except ImportError:
-    # Fallback if running from within backend dir or other structure issues
-    from telegram_bot import run_telegram_bot
+# Imports for Telegram Bot handled inside startup_event to avoid top-level side effects/errors
 
 from fastapi.middleware.cors import CORSMiddleware
 
