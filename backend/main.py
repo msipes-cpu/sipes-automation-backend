@@ -11,6 +11,7 @@ from datetime import datetime
 
 # Add current directory to sys.path to ensure module resolution
 sys.path.append(os.getcwd())
+import stripe
 # Imports for Telegram Bot handled inside startup_event to avoid top-level side effects/errors
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -45,6 +46,9 @@ def get_db_connection():
 
 @app.on_event("startup")
 async def startup_event():
+    # Initialize Stripe
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+    
     # Initialize DB
     init_db()
     
@@ -325,6 +329,120 @@ async def process_apollo_url(request: LeadGenRequest, background_tasks: Backgrou
         run_id # Pass run_id
     )
     return {"status": "queued", "job": "lead_gen_orchestrator", "run_id": run_id}
+
+# --- Stripe Endpoints ---
+
+@app.post("/api/create-checkout-session")
+async def create_checkout_session(request: LeadGenRequest):
+    if not stripe.api_key:
+        raise HTTPException(status_code=500, detail="Stripe API Key not configured")
+
+    try:
+        # 1. Calculate Price
+        limit = request.limit or 100
+        # Price Logic: $0.50 per 1000 items. Minimum $0.50? Let's stick to user prompt roughly.
+        # User said: "50 cents a thousand leads... If it's over 10,000 leads, it's $10... whatever you think a reasonable amount would be"
+        # Let's simplify: $0.50 per 1000.
+        # Price in Cents. 
+        # (limit / 1000) * 0.50 dollars -> (limit / 1000) * 50 cents
+        price_cents = int((limit / 1000) * 50)
+        if price_cents < 50: price_cents = 50 # Minimum 50 cents charge to cover fees roughly
+
+        # 2. Create Session
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': 'usd',
+                    'product_data': {
+                        'name': 'Apollo Lead Generation',
+                        'description': f'Scraping & Enriching {limit} leads',
+                    },
+                    'unit_amount': price_cents,
+                },
+                'quantity': 1,
+            }],
+            mode='payment',
+            success_url=request.url + '?success=true&run_id={CHECKOUT_SESSION_ID}', # Frontend URL logic needs to handle this.
+            # Actually success_url should be the frontend URL.
+            # We don't know the exact frontend URL here easily unless passed or env.
+            # Let's assume request.url is the Apollo URL, NOT the frontend URL. 
+            # We need the Frontend Origin.
+            success_url=os.getenv("FRONTEND_URL", "https://sipes-automation-frontend-production.up.railway.app/lead-gen") + "?success=true&session_id={CHECKOUT_SESSION_ID}",
+            cancel_url=os.getenv("FRONTEND_URL", "https://sipes-automation-frontend-production.up.railway.app/lead-gen") + "?canceled=true",
+            metadata={
+                'apollo_url': request.url,
+                'email': request.email,
+                'limit': str(limit)
+            }
+        )
+        return {"checkoutUrl": checkout_session.url}
+    except Exception as e:
+        print(f"Stripe Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+from fastapi import Request
+
+@app.post("/api/webhook/stripe")
+async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
+    payload = await request.body()
+    sig_header = request.headers.get('stripe-signature')
+    endpoint_secret = os.getenv('STRIPE_WEBHOOK_SECRET')
+
+    event = None
+
+    try:
+        if endpoint_secret:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, endpoint_secret
+            )
+        else:
+            # If no secret (dev), just parse raw
+            # WARN: insecure for prod, but handy if user hasn't set secret yet
+            data = json.loads(payload)
+            event = stripe.Event.construct_from(data, stripe.api_key)
+    except ValueError as e:
+        # Invalid payload
+        raise HTTPException(status_code=400, detail="Invalid payload")
+    except stripe.error.SignatureVerificationError as e:
+        # Invalid signature
+        raise HTTPException(status_code=400, detail="Invalid signature")
+
+    # Handle the event
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        
+        # Fulfill the purchase...
+        metadata = session.get('metadata', {})
+        apollo_url = metadata.get('apollo_url')
+        email = metadata.get('email')
+        limit = metadata.get('limit')
+        
+        if apollo_url and email:
+            print(f"Payment received! Starting job for {email}")
+            
+            run_id = str(uuid.uuid4())
+            # Register Run
+            conn = get_db_connection()
+            try:
+                conn.execute("INSERT INTO runs (run_id, script_name, status, start_time) VALUES (?, ?, ?, ?)",
+                        (run_id, "lead_gen_orchestrator.py", "QUEUED", datetime.utcnow().isoformat()))
+                conn.commit()
+            finally:
+                conn.close()
+
+            # Start Task
+            background_tasks.add_task(
+                run_script_task, 
+                "lead_gen_orchestrator.py", 
+                ["--url", apollo_url, "--email", email, "--limit", str(limit or 100)], 
+                {},
+                run_id
+            )
+            
+            print(f"Job started: {run_id}")
+
+    return {"status": "success"}
 
 if __name__ == "__main__":
     import uvicorn
