@@ -81,12 +81,15 @@ function LeadGenContent() {
                 body: JSON.stringify({ url, email: "preview@test.com", limit: 10 }),
             });
 
-            if (!res.ok) throw new Error("Failed to fetch preview");
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.detail || "Failed to fetch preview");
+            }
             const data = await res.json();
             setPreviewData(data.leads || []);
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            setErrorMsg("Failed to load preview. Please check the URL.");
+            setErrorMsg(err.message || "Failed to load preview. Please check the URL.");
             setStatus("error");
         } finally {
             setPreviewLoading(false);
