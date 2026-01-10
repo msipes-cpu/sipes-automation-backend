@@ -402,130 +402,128 @@ function LeadGenContent() {
                             </div>
                         </div>
 
-                    </div>
-                </div>
 
-                {/* Preview Table */}
-                {previewData.length > 0 && (
-                    <div className="mt-8 bg-white rounded-2xl shadow-xl border border-zinc-100 p-8 overflow-hidden">
-                        <h3 className="text-xl font-bold text-zinc-900 mb-4 flex items-center gap-2">
-                            <CheckCircle className="w-5 h-5 text-green-600" />
-                            Preview Results (First 10)
-                        </h3>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left text-zinc-600">
-                                <thead className="text-xs text-zinc-700 uppercase bg-zinc-50">
-                                    <tr>
-                                        <th className="px-4 py-3 rounded-l-lg">Name</th>
-                                        <th className="px-4 py-3">Title</th>
-                                        <th className="px-4 py-3">Company</th>
-                                        <th className="px-4 py-3 rounded-r-lg">Verified Email</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {previewData.map((lead, idx) => (
-                                        <tr key={idx} className="bg-white border-b hover:bg-zinc-50">
-                                            <td className="px-4 py-3 font-medium text-zinc-900">
-                                                {lead.first_name} {lead.last_name}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                {lead.title || "-"}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                {lead.company || "-"}
-                                            </td>
-                                            <td className="px-4 py-3 font-mono text-xs text-blue-600">
-                                                {lead.blitz_email || "Not Found"}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                        <p className="text-xs text-zinc-500 mt-4 text-center">
-                            * Emails are partially masked for preview. Full verified emails included in purchase.
-                        </p>
-                    </div>
-                )}
-
-                {/* Status Area */}
-                {(status === "processing" || status === "success" || status === "error") && (
-                    <div className={`mt-8 p-6 rounded-xl border ${status === "success" ? "bg-green-50 border-green-200" :
-                        status === "error" ? "bg-red-50 border-red-200" :
-                            "bg-blue-50 border-blue-200"
-                        }`}>
-                        <div className="flex items-start gap-4">
-                            {status === "processing" && <Loader2 className="w-6 h-6 text-blue-600 animate-spin mt-1" />}
-                            {status === "success" && <CheckCircle className="w-6 h-6 text-green-600 mt-1" />}
-                            {status === "error" && <AlertCircle className="w-6 h-6 text-red-600 mt-1" />}
-
-                            <div className="flex-1">
-                                <h3 className={`font-semibold text-lg mb-1 ${status === "success" ? "text-green-900" :
-                                    status === "error" ? "text-red-900" :
-                                        "text-blue-900"
-                                    }`}>
-                                    {status === "processing" ? "Enriching Leads..." :
-                                        status === "success" ? "Process Complete!" :
-                                            "Error Occurred"}
+                        {/* Preview Table */}
+                        {previewData.length > 0 && (
+                            <div className="mt-8 bg-white rounded-2xl shadow-xl border border-zinc-100 p-8 overflow-hidden">
+                                <h3 className="text-xl font-bold text-zinc-900 mb-4 flex items-center gap-2">
+                                    <CheckCircle className="w-5 h-5 text-green-600" />
+                                    Preview Results (First 10)
                                 </h3>
-
-                                <p className={`text-sm ${status === "success" ? "text-green-700" :
-                                    status === "error" ? "text-red-700" :
-                                        "text-blue-700"
-                                    }`}>
-                                    {status === "processing" && !paymentSessionId && `Processing leads... We are scraping Apollo, enriching emails, and verifying data.`}
-                                    {status === "processing" && paymentSessionId && `Payment Received! Waiting for job to start...`}
-                                    {status === "error" && (errorMsg || "Something went wrong. Please check your inputs.")}
-                                    {status === "success" && !resultLink && "Finished, but could not find the sheet link in logs."}
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left text-zinc-600">
+                                        <thead className="text-xs text-zinc-700 uppercase bg-zinc-50">
+                                            <tr>
+                                                <th className="px-4 py-3 rounded-l-lg">Name</th>
+                                                <th className="px-4 py-3">Title</th>
+                                                <th className="px-4 py-3">Company</th>
+                                                <th className="px-4 py-3 rounded-r-lg">Verified Email</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {previewData.map((lead, idx) => (
+                                                <tr key={idx} className="bg-white border-b hover:bg-zinc-50">
+                                                    <td className="px-4 py-3 font-medium text-zinc-900">
+                                                        {lead.first_name} {lead.last_name}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        {lead.title || "-"}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        {lead.company || "-"}
+                                                    </td>
+                                                    <td className="px-4 py-3 font-mono text-xs text-blue-600">
+                                                        {lead.blitz_email || "Not Found"}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <p className="text-xs text-zinc-500 mt-4 text-center">
+                                    * Emails are partially masked for preview. Full verified emails included in purchase.
                                 </p>
-
-                                {/* Progress Bar */}
-                                {status === "processing" && progress > 0 && (
-                                    <div className="mt-4">
-                                        <div className="flex justify-between text-xs font-semibold text-blue-700 mb-1">
-                                            <span>Progress</span>
-                                            <span>{Math.round(progress)}%</span>
-                                        </div>
-                                        <div className="w-full bg-blue-200 rounded-full h-2.5">
-                                            <div
-                                                className="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-out"
-                                                style={{ width: `${progress}%` }}
-                                            ></div>
-                                        </div>
-                                        <p className="text-xs text-blue-600 mt-1 italic">
-                                            Enriching leads... this can take a few minutes.
-                                        </p>
-                                    </div>
-                                )}
-
-                                {resultLink && (
-                                    <div className="mt-4">
-                                        <a
-                                            href={resultLink}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium shadow-md transition-colors"
-                                        >
-                                            <Download className="w-4 h-4" />
-                                            Open Google Sheet
-                                        </a>
-                                    </div>
-                                )}
                             </div>
-                        </div>
+                        )}
+
+                        {/* Status Area */}
+                        {(status === "processing" || status === "success" || status === "error") && (
+                            <div className={`mt-8 p-6 rounded-xl border ${status === "success" ? "bg-green-50 border-green-200" :
+                                status === "error" ? "bg-red-50 border-red-200" :
+                                    "bg-blue-50 border-blue-200"
+                                }`}>
+                                <div className="flex items-start gap-4">
+                                    {status === "processing" && <Loader2 className="w-6 h-6 text-blue-600 animate-spin mt-1" />}
+                                    {status === "success" && <CheckCircle className="w-6 h-6 text-green-600 mt-1" />}
+                                    {status === "error" && <AlertCircle className="w-6 h-6 text-red-600 mt-1" />}
+
+                                    <div className="flex-1">
+                                        <h3 className={`font-semibold text-lg mb-1 ${status === "success" ? "text-green-900" :
+                                            status === "error" ? "text-red-900" :
+                                                "text-blue-900"
+                                            }`}>
+                                            {status === "processing" ? "Enriching Leads..." :
+                                                status === "success" ? "Process Complete!" :
+                                                    "Error Occurred"}
+                                        </h3>
+
+                                        <p className={`text-sm ${status === "success" ? "text-green-700" :
+                                            status === "error" ? "text-red-700" :
+                                                "text-blue-700"
+                                            }`}>
+                                            {status === "processing" && !paymentSessionId && `Processing leads... We are scraping Apollo, enriching emails, and verifying data.`}
+                                            {status === "processing" && paymentSessionId && `Payment Received! Waiting for job to start...`}
+                                            {status === "error" && (errorMsg || "Something went wrong. Please check your inputs.")}
+                                            {status === "success" && !resultLink && "Finished, but could not find the sheet link in logs."}
+                                        </p>
+
+                                        {/* Progress Bar */}
+                                        {status === "processing" && progress > 0 && (
+                                            <div className="mt-4">
+                                                <div className="flex justify-between text-xs font-semibold text-blue-700 mb-1">
+                                                    <span>Progress</span>
+                                                    <span>{Math.round(progress)}%</span>
+                                                </div>
+                                                <div className="w-full bg-blue-200 rounded-full h-2.5">
+                                                    <div
+                                                        className="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-out"
+                                                        style={{ width: `${progress}%` }}
+                                                    ></div>
+                                                </div>
+                                                <p className="text-xs text-blue-600 mt-1 italic">
+                                                    Enriching leads... this can take a few minutes.
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {resultLink && (
+                                            <div className="mt-4">
+                                                <a
+                                                    href={resultLink}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium shadow-md transition-colors"
+                                                >
+                                                    <Download className="w-4 h-4" />
+                                                    Open Google Sheet
+                                                </a>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                     </div>
-                )}
+                </div >
+            </main >
+        );
+    }
 
-            </div>
-            </div >
-        </main >
-    );
-}
-
-export default function LeadGenPage() {
-    return (
-        <Suspense fallback={<div className="min-h-screen bg-zinc-50 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-zinc-400" /></div>}>
-            <LeadGenContent />
-        </Suspense>
-    );
-}
+    export default function LeadGenPage() {
+        return (
+            <Suspense fallback={<div className="min-h-screen bg-zinc-50 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-zinc-400" /></div>}>
+                <LeadGenContent />
+            </Suspense>
+        );
+    }
