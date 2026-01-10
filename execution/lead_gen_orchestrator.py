@@ -37,22 +37,21 @@ BLITZ_API_URL = "https://api.blitz-api.ai/api/enrichment/email"
 APOLLO_API_KEY = os.getenv("APOLLO_API_KEY")
 BLITZ_API_KEY = os.getenv("BLITZ_API_KEY")
 
-def run_orchestrator(apollo_url, target_email, limit=100):
-    print(f"Starting Lead Gen for URL: {apollo_url}")
-    print(f"Target Email: {target_email}")
-    print(f"Lead Limit: {limit}")
+def fetch_and_enrich_leads(apollo_url, limit=100):
+    print(f"Starting Fetch for URL: {apollo_url}")
+    print(f"Limit: {limit}")
 
     # 1. Parse URL
     print("Parsing URL...")
     payload = parse_apollo_url(apollo_url)
     if not payload:
         print("Error: Could not parse URL or URL is invalid.")
-        return
+        return []
 
     # Add API KEY for Apollo
     if not APOLLO_API_KEY:
         print("Error: APOLLO_API_KEY not set.")
-        return
+        return []
     
     # 2. Search Apollo
     print("Searching Apollo...")
@@ -62,14 +61,14 @@ def run_orchestrator(apollo_url, target_email, limit=100):
         "X-Api-Key": APOLLO_API_KEY
     }
     
-    # Force 100 leads per request
-    payload["per_page"] = 100
+    # Smart per_page
+    payload["per_page"] = min(100, limit)
     
     all_leads = []
     page = 1
     target_count = limit
 
-    # Minimal Loop for 100 leads
+    # Minimal Loop
     while len(all_leads) < target_count:
         payload["page"] = page
         try:
@@ -87,6 +86,7 @@ def run_orchestrator(apollo_url, target_email, limit=100):
                 all_leads = all_leads[:target_count]
                 break
             page += 1
+            # Avoid rapid paging if scraping many
             time.sleep(1)
         except Exception as e:
             print(f"Apollo Search Error: {e}")
@@ -94,13 +94,12 @@ def run_orchestrator(apollo_url, target_email, limit=100):
             
     print(f"Total Leads Found: {len(all_leads)}")
     if not all_leads:
-        print("No leads found.")
-        return
+        return []
 
     # 3. Enrich with Blitz
     if not BLITZ_API_KEY:
         print("Error: BLITZ_API_KEY not set.")
-        return
+        return []
         
     print("Enriching with Blitz...")
     enriched_leads = []
@@ -132,22 +131,59 @@ def run_orchestrator(apollo_url, target_email, limit=100):
             except Exception as e:
                 print(f"Blitz Error for {linkedin_url}: {e}")
         
-        # 4. Filter: Only keep if email found
+        # 4. Filter & Normalize
         if email and email.strip() and email != "unable to get email":
             lead['blitz_email'] = email
-            # We also update the main email field for export convenience?
-            # Or keep separate? User said "put 'unable to get email' - that's fine" in previous prompt
-            # But in THIS prompt: "removes all the ones they weren't able to get the emails for"
-            # So we filter!
             enriched_leads.append(lead)
         
         if (i+1) % 10 == 0:
             print(f"Enriched {i+1}/{len(all_leads)}...")
 
     print(f"Leads with Email: {len(enriched_leads)}")
+    return enriched_leads
+
+def get_preview_leads(apollo_url):
+    """
+    Fetches 10 leads, enriches them, and masks emails for preview.
+    """
+    leads = fetch_and_enrich_leads(apollo_url, limit=10)
+    
+    # Mask emails
+    for lead in leads:
+        email = lead.get('blitz_email', '')
+        if email and '@' in email:
+            try:
+                user, domain = email.split('@')
+                if len(user) > 2:
+                    masked_user = user[:2] + '*' * (len(user) - 2)
+                else:
+                    masked_user = user + '*'
+                lead['blitz_email'] = f"{masked_user}@{domain}"
+            except: pass
+            
+    # Apply Column Logic for Preview too (Clean up output)
+    clean_leads = []
+    unwanted = {'account', 'account_id', 'awards', 'email', 'organization_id', 'breadcrumbs'}
+    
+    for lead in leads:
+        new_lead = {}
+        # Priority columns
+        new_lead['first_name'] = lead.get('first_name', '')
+        new_lead['last_name'] = lead.get('last_name', '')
+        new_lead['blitz_email'] = lead.get('blitz_email', '')
+        new_lead['title'] = lead.get('title', '')
+        new_lead['company'] = lead.get('organization', {}).get('name') or lead.get('company', '') # Apollo structure varies
+        
+        # Add others if needed, but preview should be simple
+        clean_leads.append(new_lead)
+        
+    return clean_leads
+
+def run_orchestrator(apollo_url, target_email, limit=100):
+    enriched_leads = fetch_and_enrich_leads(apollo_url, limit)
     
     if not enriched_leads:
-        print("No leads with emails found.")
+        print("No enriched leads to export.")
         return
 
     # 5. Export to Google Sheets
@@ -157,63 +193,20 @@ def run_orchestrator(apollo_url, target_email, limit=100):
         keys.update(l.keys())
     
     # Custom Column Logic
-    # 1. DELETE unwanted columns
-    # Note: We try to match user request. Apollo keys are usually snake_case. 
-    # checking for 'account', 'account_id', 'awards', 'email' (original)
     unwanted = {'account', 'account_id', 'awards', 'email', 'organization_id', 'breadcrumbs'} 
-    # Added organization_id/breadcrumbs as they are often clutter too, but sticking strictly to user request mainly
-    # User asked for: Account, account ID, Awards, email
     
-    # We filter keys effectively
     filtered_keys = [k for k in keys if k not in unwanted and k.lower() not in ['account', 'account id', 'awards']]
 
-    # 2. REORDER: first_name, last_name, blitz_email at the front
     priority = ['first_name', 'last_name', 'blitz_email']
     
-    # Remove priority keys from general pool to avoid dupes
     remaining = [k for k in filtered_keys if k not in priority]
     remaining.sort()
     
     fieldnames = priority + remaining
     
-    # Prepare data list of lists for gspread (handled by export_leads logic usually, but export_leads.py works on CSV/JSON)
-    # Let's use export_leads.py via subprocess to ensure we use the logic we just fixed (DWD, etc)
-    # First save to temp csv
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    temp_csv = f"leads_{timestamp}.csv"
+    # ... Export Logic (Gspread)
+    # Using existing logic flow but cleaned up
     
-    with open(temp_csv, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(enriched_leads)
-        
-    print(f"Saved temp CSV: {temp_csv}")
-    
-    # Call export_leads.py
-    # We need to explicitly pass impersonating email (which is the target email usually, or we use the one in ENV if configured)
-    # The user said "input an email address... The sheet would be shared with that email address."
-    # AND "I can update the scripts to impersonate you".
-    # Usually you impersonate the admin (msipes@sipesautomation.com) to CREATE the sheet, then SHARE it with the input email.
-    # OR if the input email IS the admin, just impersonate them.
-    # Let's assume we impersonate the env var GOOGLE_IMPERSONATE_EMAIL (admin) to own the file, 
-    # and SHARE it with `target_email`.
-    
-    # Modifying export_leads.py to accept --share_email might be needed if it doesn't already?
-    # Checked export_leads.py: it reads TARGET_EMAIL_FOR_SHARES from env. 
-    # I should pass it via env var when calling subprocess.
-    
-    from export_leads import export_to_sheets, read_csv
-    # Actually, importing is better if we can instantiate params dynamically.
-    # But export_leads.py logic for sharing is inside `create_new_sheet` which reads env.
-    
-    print("Exporting to Google Sheets...")
-    # Update env for sharing just for this call
-    os.environ["TARGET_EMAIL_FOR_SHARES"] = target_email
-    
-    # We call the main block logic or re-implement export call here.
-    # Re-implementing is safer to control the flow.
-    
-    # ... (Export Logic)
     try:
         import gspread
         from google.oauth2.service_account import Credentials
@@ -239,15 +232,14 @@ def run_orchestrator(apollo_url, target_email, limit=100):
             
         client = gspread.authorize(creds)
         
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         sheet_title = f"Apollo Leads - {timestamp}"
         sh = client.create(sheet_title)
         
-        # Share
         if target_email:
             print(f"Sharing with {target_email}...")
             sh.share(target_email, perm_type='user', role='writer')
             
-        # Write data
         worksheet = sh.get_worksheet(0)
         rows = [fieldnames]
         for lead in enriched_leads:

@@ -330,6 +330,22 @@ async def process_apollo_url(request: LeadGenRequest, background_tasks: Backgrou
     )
     return {"status": "queued", "job": "lead_gen_orchestrator", "run_id": run_id}
 
+@app.post("/api/leads/preview")
+def preview_leads(request: LeadGenRequest):
+    """
+    Returns a preview of enriched leads without saving.
+    """
+    try:
+        # Import here to avoid circular dependencies if any, 
+        # though top-level is usually fine.
+        from execution.lead_gen_orchestrator import get_preview_leads
+        
+        leads = get_preview_leads(request.url)
+        return {"leads": leads}
+    except Exception as e:
+        print(f"Preview Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # --- Stripe Endpoints ---
 
 @app.post("/api/create-checkout-session")
