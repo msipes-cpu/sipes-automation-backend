@@ -13,6 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the backend server code
 COPY backend/main.py .
 COPY backend/telegram_bot.py .
+COPY backend/email_service.py .
 
 # Copy the execution scripts
 # valid when building from project root
