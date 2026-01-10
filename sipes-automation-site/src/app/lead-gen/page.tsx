@@ -519,12 +519,11 @@ function LeadGenContent() {
             </main>
         );
     }
-}
 
-export default function LeadGenPage() {
-    return (
-        <Suspense fallback={<div className="min-h-screen bg-zinc-50 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-zinc-400" /></div>}>
-            <LeadGenContent />
-        </Suspense>
-    );
-}
+    export default function LeadGenPage() {
+        return (
+            <Suspense fallback={<div className="min-h-screen bg-zinc-50 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-zinc-400" /></div>}>
+                <LeadGenContent />
+            </Suspense>
+        );
+    }

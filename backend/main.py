@@ -16,16 +16,24 @@ import time
 sys.path.append(os.getcwd())
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+# AGGRESSIVE DEBUGGING
+print(f"DEBUG: CWD: {os.getcwd()}")
+print(f"DEBUG: sys.path: {sys.path}")
+print("DEBUG: File Listing:")
+for root, dirs, files in os.walk("."):
+    for name in files:
+        if "pycache" not in root:
+            print(os.path.join(root, name))
+
 import stripe
 
-# Try bare import first (if main.py is root), then package import
 try:
     from email_service import send_job_completion_email, send_job_failure_email
 except ImportError:
     try:
         from backend.email_service import send_job_completion_email, send_job_failure_email
     except ImportError as e:
-        print(f"CRITICAL: Could not import email_service. CWD: {os.getcwd()}, LS: {os.listdir(os.getcwd())}")
+        print(f"CRITICAL: Could not import email_service. Error: {e}")
         raise e
 
 # Imports for Telegram Bot handled inside startup_event to avoid top-level side effects/errors
