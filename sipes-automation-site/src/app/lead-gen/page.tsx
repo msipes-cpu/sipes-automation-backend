@@ -515,8 +515,8 @@ function LeadGenContent() {
                         )}
 
                     </div>
-                </div >
-            </main >
+                </div>
+            </main>
         );
     }
 
