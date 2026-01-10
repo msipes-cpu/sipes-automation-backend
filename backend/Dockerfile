@@ -14,6 +14,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/main.py .
 COPY backend/telegram_bot.py .
 COPY backend/email_service.py .
+COPY backend/database.py .
+COPY backend/models.py .
+COPY backend/celery_app.py .
+COPY backend/tasks.py .
+COPY backend/worker.py .
+COPY backend/start.sh .
 
 # Copy the execution scripts
 # valid when building from project root
@@ -24,10 +30,11 @@ COPY inboxbench/ ./inboxbench/
 # Create .tmp directory for script outputs and other dirs
 RUN mkdir -p .tmp marketing
 
+# Make start script executable
+RUN chmod +x start.sh
+
 # Expose the port
 EXPOSE 8000
 
-# Run the application
-# Run the application
-# Use python directly to handle PORT env var programmatically
-CMD ["python3", "main.py"]
+# Run the application using the startup script (Worker + Web)
+CMD ["./start.sh"]
