@@ -77,9 +77,20 @@ async def startup_event():
     if bot_app:
         await bot_app.initialize()
         await bot_app.start()
-        await bot_app.updater.start_polling()
-        app.state.bot_app = bot_app
-        print("Telegram Bot started successfully (Async)")
+        try:
+            await bot_app.updater.start_polling()
+            app.state.bot_app = bot_app
+            print("Telegram Bot started successfully (Async)")
+        except Exception as e:
+            # Check for Conflict (import error inside function to be safe if not at top)
+            if "Conflict" in str(e) or "terminated by other getUpdates" in str(e):
+                print(f"Telegram Bot Conflict: Another instance is running. Disabling this instance to prevent fighting.")
+                await bot_app.stop()
+                await bot_app.shutdown()
+                app.state.bot_app = None
+            else:
+                print(f"Telegram Bot failed to start polling: {e}")
+                # We don't re-raise to avoid crashing the whole backend
     else:
         print("Telegram Bot failed to start (No Token?)")
 

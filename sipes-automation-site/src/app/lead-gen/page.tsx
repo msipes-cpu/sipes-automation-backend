@@ -230,14 +230,34 @@ function LeadGenContent() {
                         const runStatus = data.run?.status;
 
                         if (data.logs) {
+                            const newLogs: string[] = [];
+                            let fullLogText = "";
+
                             data.logs.forEach((log: any) => {
                                 try {
                                     const logData = typeof log.data === 'string' ? JSON.parse(log.data) : log.data;
                                     const stdout = logData.stdout || "";
-                                    const match = stdout.match(/Sheet URL:\s*(https?:\/\/[^\s]+)/);
-                                    if (match) setResultLink(match[1]);
+                                    if (stdout) {
+                                        newLogs.push(stdout);
+                                        fullLogText += stdout + "\n";
+                                    }
                                 } catch (e) { }
                             });
+
+                            // Check for Sheet URL
+                            const match = fullLogText.match(/Sheet URL:\s*(https?:\/\/[^\s]+)/);
+                            if (match) setResultLink(match[1]);
+
+                            // Check for Progress
+                            const progressMatches = [...fullLogText.matchAll(/\[PROGRESS\]: (\d+)\/(\d+)/g)];
+                            if (progressMatches.length > 0) {
+                                const lastMatch = progressMatches[progressMatches.length - 1];
+                                const current = parseInt(lastMatch[1]);
+                                const total = parseInt(lastMatch[2]);
+                                if (total > 0) {
+                                    setProgress((current / total) * 100);
+                                }
+                            }
                         }
 
                         if (runStatus === "COMPLETED") {
@@ -458,6 +478,25 @@ function LeadGenContent() {
                                     {status === "error" && (errorMsg || "Something went wrong. Please check your inputs.")}
                                     {status === "success" && !resultLink && "Finished, but could not find the sheet link in logs."}
                                 </p>
+
+                                {/* Progress Bar */}
+                                {status === "processing" && progress > 0 && (
+                                    <div className="mt-4">
+                                        <div className="flex justify-between text-xs font-semibold text-blue-700 mb-1">
+                                            <span>Progress</span>
+                                            <span>{Math.round(progress)}%</span>
+                                        </div>
+                                        <div className="w-full bg-blue-200 rounded-full h-2.5">
+                                            <div
+                                                className="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-out"
+                                                style={{ width: `${progress}%` }}
+                                            ></div>
+                                        </div>
+                                        <p className="text-xs text-blue-600 mt-1 italic">
+                                            Enriching leads... this can take a few minutes.
+                                        </p>
+                                    </div>
+                                )}
 
                                 {resultLink && (
                                     <div className="mt-4">
