@@ -481,8 +481,8 @@ function LeadGenContent() {
                                         {status === "processing" && progress > 0 && (
                                             <div className="mt-4">
                                                 <div className="flex justify-between text-xs font-semibold text-blue-700 mb-1">
-                                                    <span>Progress</span>
-                                                    <span>{Math.round(progress)}%</span>
+                                                    <span>Verified Leads Found</span>
+                                                    <span>{Math.round(progress)}% ({limit ? Math.floor(progress / 100 * limit) : 0}/{limit})</span>
                                                 </div>
                                                 <div className="w-full bg-blue-200 rounded-full h-2.5">
                                                     <div
@@ -519,11 +519,12 @@ function LeadGenContent() {
             </main>
         );
     }
+}
 
-    export default function LeadGenPage() {
-        return (
-            <Suspense fallback={<div className="min-h-screen bg-zinc-50 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-zinc-400" /></div>}>
-                <LeadGenContent />
-            </Suspense>
-        );
-    }
+export default function LeadGenPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-zinc-50 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-zinc-400" /></div>}>
+            <LeadGenContent />
+        </Suspense>
+    );
+}

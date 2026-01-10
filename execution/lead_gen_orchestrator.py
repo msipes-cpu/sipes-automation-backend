@@ -39,7 +39,7 @@ BLITZ_API_KEY = os.getenv("BLITZ_API_KEY")
 
 def fetch_and_enrich_leads(apollo_url, limit=100):
     print(f"Starting Fetch for URL: {apollo_url}")
-    print(f"Limit: {limit}")
+    print(f"Target Verified Leads: {limit}")
 
     # 1. Parse URL
     print("Parsing URL...")
@@ -48,106 +48,115 @@ def fetch_and_enrich_leads(apollo_url, limit=100):
         print("Error: Could not parse URL or URL is invalid.")
         return []
 
-    # Add API KEY for Apollo
     if not APOLLO_API_KEY:
         print("Error: APOLLO_API_KEY not set.")
         return []
+
+    if not BLITZ_API_KEY:
+        print("Error: BLITZ_API_KEY not set.")
+        return []
     
-    # 2. Search Apollo
-    print("Searching Apollo...")
     headers = {
         "Content-Type": "application/json",
         "Cache-Control": "no-cache",
         "X-Api-Key": APOLLO_API_KEY
     }
     
-    # Smart per_page
-    payload["per_page"] = min(100, limit)
-    
-    all_leads = []
-    page = 1
-    target_count = limit
-
-    # Minimal Loop
-    while len(all_leads) < target_count:
-        payload["page"] = page
-        try:
-            resp = requests.post(APOLLO_API_URL, headers=headers, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-            people = data.get("people", [])
-            print(f"Page {page}: Found {len(people)}")
-            
-            if not people:
-                break
-                
-            all_leads.extend(people)
-            if len(all_leads) >= target_count:
-                all_leads = all_leads[:target_count]
-                break
-            page += 1
-            # Avoid rapid paging if scraping many
-            time.sleep(1)
-        except Exception as e:
-            print(f"Apollo Search Error: {e}")
-            break
-            
-    print(f"Total Leads Found: {len(all_leads)}")
-    if not all_leads:
-        return []
-
-    # 3. Enrich with Blitz
-    if not BLITZ_API_KEY:
-        print("Error: BLITZ_API_KEY not set.")
-        return []
-        
-    print("Enriching with Blitz...")
-    enriched_leads = []
     blitz_headers = {
         "Content-Type": "application/json",
         "x-api-key": BLITZ_API_KEY
     }
     
-    for i, lead in enumerate(all_leads):
-        linkedin_url = lead.get("linkedin_url")
-        email = None
+    verified_leads = []
+    seen_ids = set()
+    page = 1
+    total_scanned = 0
+    max_scan_limit = limit * 5 # Safety brake: scan at most 5x target to find leads
+    
+    # Smart per_page - fetch a bit more than needed to reduce calls since some will fail enrichment
+    payload["per_page"] = 100 
+    
+    while len(verified_leads) < limit and total_scanned < max_scan_limit:
         
-        if linkedin_url:
-            try:
-                # Rate limit 5/sec -> 0.25s sleep
-                time.sleep(0.25) 
+        # 2. Search Apollo Batch
+        payload["page"] = page
+        try:
+            print(f"Searching Apollo Page {page}...")
+            resp = requests.post(APOLLO_API_URL, headers=headers, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+            people = data.get("people", [])
+            
+            if not people:
+                print("No more leads found in Apollo.")
+                break
                 
-                b_resp = requests.post(BLITZ_API_URL, headers=blitz_headers, json={"linkedin_profile_url": linkedin_url})
-                if b_resp.status_code == 200:
-                    b_data = b_resp.json()
-                    # Check various email fields
-                    email = b_data.get('email') or b_data.get('work_email') or b_data.get('personal_email')
-                    
-                    if not email and 'data' in b_data and isinstance(b_data['data'], dict):
-                        email = b_data['data'].get('email')
-                elif b_resp.status_code == 429:
-                    print("Rate limit hit, waiting...")
-                    time.sleep(2)
-            except Exception as e:
-                print(f"Blitz Error for {linkedin_url}: {e}")
-        
-        # 4. Filter & Normalize
-        if email and email.strip() and email != "unable to get email":
-            lead['blitz_email'] = email
-            enriched_leads.append(lead)
-        
-        # Progress Update
-        # We base progress on 'processed' vs 'total found'
-        # Emitting [PROGRESS]: X/Y
-        if (i+1) % 5 == 0 or (i+1) == len(all_leads):
-            print(f"[PROGRESS]: {i+1}/{len(all_leads)}")
-            sys.stdout.flush() # Ensure it sends immediately
+            print(f"Page {page}: Fetched {len(people)} raw leads. Enriching...")
+            
+            # 3. Enrich Batch with Blitz
+            batch_verified = 0
+            for lead in people:
+                lid = lead.get('id')
+                if lid in seen_ids:
+                    continue
+                seen_ids.add(lid)
+                total_scanned += 1
+                
+                # Check Global Scan Limit
+                if total_scanned > max_scan_limit:
+                    print("Hit Max Scan Limit (5x target). Stopping safety brake.")
+                    break
 
-        if (i+1) % 10 == 0:
-            print(f"Enriched {i+1}/{len(all_leads)}...")
+                # Blitz Enrichment
+                linkedin_url = lead.get("linkedin_url")
+                email = None
+                
+                if linkedin_url:
+                    try:
+                        # Rate limit protection
+                        time.sleep(0.2) 
+                        
+                        b_resp = requests.post(BLITZ_API_URL, headers=blitz_headers, json={"linkedin_profile_url": linkedin_url})
+                        if b_resp.status_code == 200:
+                            b_data = b_resp.json()
+                            # Prioritize work email
+                            email = b_data.get('work_email') or b_data.get('email')
+                            
+                            # Fallback to data object if needed
+                            if not email and 'data' in b_data and isinstance(b_data['data'], dict):
+                                email = b_data['data'].get('work_email') or b_data['data'].get('email')
+                        elif b_resp.status_code == 429:
+                            time.sleep(2)
+                    except Exception as e:
+                        print(f"Blitz enrich error: {e}")
+                
+                # Check Validity
+                if email and email.strip() and "unable" not in email.lower():
+                    lead['blitz_email'] = email
+                    verified_leads.append(lead)
+                    batch_verified += 1
+                
+                # Real-time Progress Update
+                # Format: [PROGRESS]: CurrentVerified/Target
+                if len(verified_leads) % 5 == 0 or len(verified_leads) >= limit:
+                    print(f"[PROGRESS]: {len(verified_leads)}/{limit}")
+                    sys.stdout.flush()
 
-    print(f"Leads with Email: {len(enriched_leads)}")
-    return enriched_leads
+                # Stop if we hit target mid-batch
+                if len(verified_leads) >= limit:
+                    break
+            
+            print(f"Batch Result: {batch_verified} verified leads found in this batch.")
+            
+            page += 1
+            time.sleep(1) # Paging delay
+            
+        except Exception as e:
+            print(f"Apollo Search Error: {e}")
+            break
+            
+    print(f"Final Count: Found {len(verified_leads)} verified leads after scanning {total_scanned}.")
+    return verified_leads[:limit]
 
 def get_preview_leads(apollo_url):
     """
