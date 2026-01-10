@@ -95,6 +95,10 @@ class LogEntry(BaseModel):
     event_type: str
     data: Dict[str, Any]
 
+class LeadGenRequest(BaseModel):
+    url: str
+    email: str
+
 # --- Endpoints ---
 
 @app.get("/")
@@ -174,42 +178,52 @@ def get_run_details(run_id: str):
 
 # ... Execution Logic ...
 
-def run_script_task(script_name: str, args: List[str], env_vars: Dict[str, str]):
+import uuid
+
+def run_script_task(script_name: str, args: List[str], env_vars: Dict[str, str], run_id: str = None):
     """
-    Executes a script in the background.
+    Executes a script in the background. Options to log to DB if run_id provided.
     """
     # Sanitize script name to prevent command injection
-    # Only allow scripts from the execution directory or its subdirectories
     safe_script_name = os.path.basename(script_name)
     script_path = os.path.join("/app/execution", safe_script_name)
     
-    # Validation for local dev where path might differ
+    # Path resolution logic (same as before)
     if not os.path.exists(script_path):
-        # Try local execution path
         if os.path.exists(os.path.join("execution", safe_script_name)):
              script_path = os.path.join("execution", safe_script_name)
-        # Try local execution path from root
         elif os.path.exists(os.path.join(os.getcwd(), "execution", safe_script_name)):
              script_path = os.path.join(os.getcwd(), "execution", safe_script_name)
-        # Try inboxbench path
         elif os.path.exists(os.path.join("/app/inboxbench/execution", safe_script_name)):
              script_path = os.path.join("/app/inboxbench/execution", safe_script_name)
         elif os.path.exists(os.path.join("inboxbench/execution", safe_script_name)):
              script_path = os.path.join("inboxbench/execution", safe_script_name)
         else:
             print(f"Error: Script {script_path} or inboxbench equivalent not found")
+            if run_id:
+                # Log error
+                pass # TODO: DB log
             return
 
     # Merge current env with provided env_vars
     current_env = os.environ.copy()
     current_env.update(env_vars)
-    # Ensure API URL is set for instrumentation
     if "API_BASE_URL" not in current_env:
         current_env["API_BASE_URL"] = "http://localhost:8000/api"
 
     cmd = ["python3", script_path] + args
     
     print(f"Starting execution of: {' '.join(cmd)}")
+    
+    # Update Status to RUNNING
+    if run_id:
+        conn = get_db_connection()
+        try:
+             conn.execute("UPDATE runs SET status = 'RUNNING' WHERE run_id = ?", (run_id,))
+             conn.commit()
+        except: pass
+        finally: conn.close()
+        
     try:
         result = subprocess.run(
             cmd, 
@@ -217,14 +231,44 @@ def run_script_task(script_name: str, args: List[str], env_vars: Dict[str, str])
             text=True, 
             env=current_env
         )
+        
+        output_data = {
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "returncode": result.returncode
+        }
+        
+        # Log to DB
+        if run_id:
+            conn = get_db_connection()
+            try:
+                # Log stdout as a special event or just raw
+                conn.execute("INSERT INTO logs (run_id, timestamp, event_type, data) VALUES (?, ?, ?, ?)",
+                          (run_id, datetime.utcnow().isoformat(), "SCRIPT_OUTPUT", json.dumps(output_data)))
+                
+                status = "COMPLETED" if result.returncode == 0 else "FAILED"
+                conn.execute("UPDATE runs SET status = ?, end_time = ? WHERE run_id = ?",
+                          (status, datetime.utcnow().isoformat(), run_id))
+                conn.commit()
+            except Exception as e:
+                print(f"DB Log Error: {e}")
+            finally:
+                conn.close()
+
         if result.returncode != 0:
             print(f"Script {safe_script_name} failed with code {result.returncode}")
             print(f"STDERR: {result.stderr}")
         else:
             print(f"Script {safe_script_name} completed successfully")
-            print(f"STDOUT: {result.stdout}")
+            
     except Exception as e:
         print(f"Exception executing script {safe_script_name}: {e}")
+        if run_id:
+            conn = get_db_connection()
+            conn.execute("UPDATE runs SET status = 'ERROR', end_time = ? WHERE run_id = ?",
+                      (datetime.utcnow().isoformat(), run_id))
+            conn.commit()
+            conn.close()
 
 @app.post("/api/execute")
 async def execute_script(request: ScriptExecutionRequest, background_tasks: BackgroundTasks):
@@ -246,10 +290,36 @@ async def execute_script(request: ScriptExecutionRequest, background_tasks: Back
     background_tasks.add_task(run_script_task, request.script_name, request.args, request.env_vars)
     return {"status": "queued", "script": request.script_name}
 
-@app.post("/api/leads/generate")
-async def generate_leads(background_tasks: BackgroundTasks):
-    """
-    Specific endpoint to trigger lead generation
-    """
     background_tasks.add_task(run_script_task, "api_powerhouse.py", [], {})
     return {"status": "queued", "job": "lead_generation"}
+
+@app.post("/api/leads/process-url")
+async def process_apollo_url(request: LeadGenRequest, background_tasks: BackgroundTasks):
+    """
+    Triggers the Apollo -> Blitz -> Sheets workflow.
+    """
+    # Run execution/lead_gen_orchestrator.py
+    # Args: --url "..." --email "..."
+    if not request.url or not request.email:
+         raise HTTPException(status_code=400, detail="URL and Email are required")
+
+    # Create valid run_id
+    run_id = str(uuid.uuid4())
+    
+    # Register Run in DB
+    conn = get_db_connection()
+    try:
+        conn.execute("INSERT INTO runs (run_id, script_name, status, start_time) VALUES (?, ?, ?, ?)",
+                  (run_id, "lead_gen_orchestrator.py", "QUEUED", datetime.utcnow().isoformat()))
+        conn.commit()
+    finally:
+        conn.close()
+
+    background_tasks.add_task(
+        run_script_task, 
+        "lead_gen_orchestrator.py", 
+        ["--url", request.url, "--email", request.email], 
+        {},
+        run_id # Pass run_id
+    )
+    return {"status": "queued", "job": "lead_gen_orchestrator", "run_id": run_id}
