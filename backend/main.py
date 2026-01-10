@@ -97,7 +97,9 @@ class LogEntry(BaseModel):
 
 class LeadGenRequest(BaseModel):
     url: str
+    url: str
     email: str
+    limit: Optional[int] = 100
 
 # --- Endpoints ---
 
@@ -318,7 +320,7 @@ async def process_apollo_url(request: LeadGenRequest, background_tasks: Backgrou
     background_tasks.add_task(
         run_script_task, 
         "lead_gen_orchestrator.py", 
-        ["--url", request.url, "--email", request.email], 
+        ["--url", request.url, "--email", request.email, "--limit", str(request.limit)], 
         {},
         run_id # Pass run_id
     )

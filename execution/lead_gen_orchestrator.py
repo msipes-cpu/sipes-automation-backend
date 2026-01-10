@@ -37,9 +37,10 @@ BLITZ_API_URL = "https://api.blitz-api.ai/api/enrichment/email"
 APOLLO_API_KEY = os.getenv("APOLLO_API_KEY")
 BLITZ_API_KEY = os.getenv("BLITZ_API_KEY")
 
-def run_orchestrator(apollo_url, target_email):
+def run_orchestrator(apollo_url, target_email, limit=100):
     print(f"Starting Lead Gen for URL: {apollo_url}")
     print(f"Target Email: {target_email}")
+    print(f"Lead Limit: {limit}")
 
     # 1. Parse URL
     print("Parsing URL...")
@@ -66,7 +67,7 @@ def run_orchestrator(apollo_url, target_email):
     
     all_leads = []
     page = 1
-    target_count = 100 # Fixed to 100 per prompt "pull 100 leads"
+    target_count = limit
 
     # Minimal Loop for 100 leads
     while len(all_leads) < target_count:
@@ -240,6 +241,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", required=True)
     parser.add_argument("--email", required=True)
+    parser.add_argument("--limit", type=int, default=100)
     args = parser.parse_args()
     
-    run_orchestrator(args.url, args.email)
+    run_orchestrator(args.url, args.email, args.limit)
