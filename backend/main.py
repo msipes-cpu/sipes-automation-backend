@@ -16,15 +16,6 @@ import time
 sys.path.append(os.getcwd())
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# AGGRESSIVE DEBUGGING
-print(f"DEBUG: CWD: {os.getcwd()}")
-print(f"DEBUG: sys.path: {sys.path}")
-print("DEBUG: File Listing:")
-for root, dirs, files in os.walk("."):
-    for name in files:
-        if "pycache" not in root:
-            print(os.path.join(root, name))
-
 import stripe
 
 try:
