@@ -7,7 +7,10 @@ import multiprocessing
 import sys
 import sqlite3
 import json
+import json
 from datetime import datetime
+import threading
+import time
 
 # Add current directory to sys.path to ensure module resolution
 sys.path.append(os.getcwd())
@@ -33,9 +36,18 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS runs
-                 (run_id TEXT PRIMARY KEY, script_name TEXT, status TEXT, start_time TEXT, end_time TEXT)''')
+                 (run_id TEXT PRIMARY KEY, script_name TEXT, status TEXT, start_time TEXT, end_time TEXT, args TEXT, env_vars TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS logs
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT, timestamp TEXT, event_type TEXT, data TEXT)''')
+    
+    # Migration for existing DBs
+    try:
+        c.execute("ALTER TABLE runs ADD COLUMN args TEXT")
+    except: pass
+    try:
+        c.execute("ALTER TABLE runs ADD COLUMN env_vars TEXT")
+    except: pass
+                 
     conn.commit()
     conn.close()
 
@@ -52,6 +64,9 @@ async def startup_event():
     # Initialize DB
     init_db()
     
+    # Start Worker Thread
+    threading.Thread(target=worker_loop, daemon=True).start()
+
     # Start Telegram Bot (Async)
     try:
         from backend.telegram_bot import get_bot_application
@@ -75,6 +90,35 @@ async def shutdown_event():
         await app.state.bot_app.updater.stop()
         await app.state.bot_app.stop()
         await app.state.bot_app.shutdown()
+
+def worker_loop():
+    print("Worker thread started...")
+    while True:
+        try:
+            conn = get_db_connection()
+            # FIFO Queue
+            cursor = conn.execute("SELECT * FROM runs WHERE status='QUEUED' ORDER BY start_time ASC LIMIT 1")
+            job = cursor.fetchone()
+            conn.close()
+            
+            if job:
+                run_id = job['run_id']
+                script_name = job['script_name']
+                print(f"[Worker] Picked up job {run_id} ({script_name})")
+                
+                # Parse args/env
+                args_str = job['args']
+                env_str = job['env_vars']
+                args = json.loads(args_str) if args_str else []
+                env_vars = json.loads(env_str) if env_str else {}
+                
+                # Run Task (Blocking)
+                run_script_task(script_name, args, env_vars, run_id)
+            else:
+                time.sleep(2) # Poll delay
+        except Exception as e:
+            print(f"[Worker] Error: {e}")
+            time.sleep(5)
 
 # --- Models ---
 
@@ -231,39 +275,49 @@ def run_script_task(script_name: str, args: List[str], env_vars: Dict[str, str],
         finally: conn.close()
         
     try:
-        result = subprocess.run(
+        # Use Popen for streaming
+        process = subprocess.Popen(
             cmd, 
-            capture_output=True, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.STDOUT, 
             text=True, 
-            env=current_env
+            env=current_env,
+            bufsize=1 # Line buffered
         )
         
-        output_data = {
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "returncode": result.returncode
-        }
-        
-        # Log to DB
+        # Stream logs
         if run_id:
             conn = get_db_connection()
-            try:
-                # Log stdout as a special event or just raw
-                conn.execute("INSERT INTO logs (run_id, timestamp, event_type, data) VALUES (?, ?, ?, ?)",
-                          (run_id, datetime.utcnow().isoformat(), "SCRIPT_OUTPUT", json.dumps(output_data)))
+            for line in iter(process.stdout.readline, ''):
+                if not line: break
                 
-                status = "COMPLETED" if result.returncode == 0 else "FAILED"
-                conn.execute("UPDATE runs SET status = ?, end_time = ? WHERE run_id = ?",
-                          (status, datetime.utcnow().isoformat(), run_id))
-                conn.commit()
-            except Exception as e:
-                print(f"DB Log Error: {e}")
-            finally:
-                conn.close()
+                # Print local
+                sys.stdout.write(line) 
+                
+                # Log to DB (Real-time)
+                # We could batch this if performance is an issue, but for <1000 lines it's fine.
+                try:
+                    log_data = {"stdout": line.strip()}
+                    conn.execute("INSERT INTO logs (run_id, timestamp, event_type, data) VALUES (?, ?, ?, ?)",
+                              (run_id, datetime.utcnow().isoformat(), "SCRIPT_OUTPUT", json.dumps(log_data)))
+                    conn.commit()
+                except: pass
+            conn.close()
+            
+        process.wait()
+        returncode = process.returncode
+        
+        # Final Status Update
+        if run_id:
+            conn = get_db_connection()
+            status = "COMPLETED" if returncode == 0 else "FAILED"
+            conn.execute("UPDATE runs SET status = ?, end_time = ? WHERE run_id = ?",
+                      (status, datetime.utcnow().isoformat(), run_id))
+            conn.commit()
+            conn.close()
 
-        if result.returncode != 0:
-            print(f"Script {safe_script_name} failed with code {result.returncode}")
-            print(f"STDERR: {result.stderr}")
+        if returncode != 0:
+            print(f"Script {safe_script_name} failed with code {returncode}")
         else:
             print(f"Script {safe_script_name} completed successfully")
             
@@ -312,22 +366,17 @@ async def process_apollo_url(request: LeadGenRequest, background_tasks: Backgrou
     # Create valid run_id
     run_id = str(uuid.uuid4())
     
-    # Register Run in DB
+    # Register Run in DB as QUEUED with ARGS
+    args = ["--url", request.url, "--email", request.email, "--limit", str(request.limit)]
     conn = get_db_connection()
     try:
-        conn.execute("INSERT INTO runs (run_id, script_name, status, start_time) VALUES (?, ?, ?, ?)",
-                  (run_id, "lead_gen_orchestrator.py", "QUEUED", datetime.utcnow().isoformat()))
+        conn.execute("INSERT INTO runs (run_id, script_name, status, start_time, args, env_vars) VALUES (?, ?, ?, ?, ?, ?)",
+                  (run_id, "lead_gen_orchestrator.py", "QUEUED", datetime.utcnow().isoformat(), json.dumps(args), json.dumps({})))
         conn.commit()
     finally:
         conn.close()
 
-    background_tasks.add_task(
-        run_script_task, 
-        "lead_gen_orchestrator.py", 
-        ["--url", request.url, "--email", request.email, "--limit", str(request.limit)], 
-        {},
-        run_id # Pass run_id
-    )
+    # Worker will pick it up
     return {"status": "queued", "job": "lead_gen_orchestrator", "run_id": run_id}
 
 @app.post("/api/leads/preview")
@@ -434,28 +483,21 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
             print(f"Payment received! Starting job for {email}")
             
             run_id = str(uuid.uuid4())
-            # Register Run
+            # Register Run as QUEUED
+            args = ["--url", apollo_url, "--email", email, "--limit", str(limit or 100)]
             conn = get_db_connection()
             try:
-                conn.execute("INSERT INTO runs (run_id, script_name, status, start_time) VALUES (?, ?, ?, ?)",
-                        (run_id, "lead_gen_orchestrator.py", "QUEUED", datetime.utcnow().isoformat()))
-                # Log the Session ID to allow frontend lookup
+                conn.execute("INSERT INTO runs (run_id, script_name, status, start_time, args, env_vars) VALUES (?, ?, ?, ?, ?, ?)",
+                        (run_id, "lead_gen_orchestrator.py", "QUEUED", datetime.utcnow().isoformat(), json.dumps(args), json.dumps({})))
+                # Log session
                 conn.execute("INSERT INTO logs (run_id, timestamp, event_type, data) VALUES (?, ?, ?, ?)",
                           (run_id, datetime.utcnow().isoformat(), "STRIPE_SESSION_ID", json.dumps({"session_id": session['id']})))
                 conn.commit()
             finally:
                 conn.close()
 
-            # Start Task
-            background_tasks.add_task(
-                run_script_task, 
-                "lead_gen_orchestrator.py", 
-                ["--url", apollo_url, "--email", email, "--limit", str(limit or 100)], 
-                {},
-                run_id
-            )
-            
-            print(f"Job started: {run_id}")
+            print(f"Job queued: {run_id}")  
+            # Worker will pick it up
 
     return {"status": "success"}
 
