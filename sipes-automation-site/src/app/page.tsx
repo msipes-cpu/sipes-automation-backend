@@ -3,6 +3,7 @@ import { Hero } from "@/components/Hero";
 import { Services } from "@/components/Services";
 import { VideoSection } from "@/components/VideoSection";
 import { Results } from "@/components/Results";
+import { Testimonials } from "@/components/Testimonials";
 import { ROICalculator } from "@/components/ROICalculator";
 import { FAQ } from "@/components/FAQ";
 import { LogoTicker } from "@/components/LogoTicker";
@@ -21,6 +22,7 @@ export default function Home() {
       <LogoTicker />
       <VideoSection />
       <Results />
+      <Testimonials />
       <Portfolio />
       <CommonAutomations />
       <Services />
