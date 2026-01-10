@@ -16,19 +16,26 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.append(current_dir)
 sys.path.append(parent_dir)
 
-from url_parser import parse_apollo_url
-# We need to import the logic from other scripts, or better yet, run them as modules
-# But since they are designed as scripts, I will subprocess them or import if possible.
-# apollo_search.py uses argparse in main, but has a search_apollo function. 
-# enrich_with_blitz.py uses argparse. I'll modify enrich_with_blitz to have an importable function or replicate logic.
-# I'll replicate the core logic here or subprocess for isolation. 
-# Subprocess is safer given the existing script structure, but importing is cleaner.
-# I'll check if I can import `search_apollo` from apollo_search.py
+# Robust Import Logic for URL Parser
 try:
-    from apollo_search import search_apollo
+    # Try importing as if we are inside the execution package
+    from .url_parser import parse_apollo_url
 except ImportError:
-    # If standard import fails, try relative
-    pass
+    try:
+        # Try absolute import (if running as script or execution in path)
+        from url_parser import parse_apollo_url
+    except ImportError:
+        # Last resort: try full package path
+        from execution.url_parser import parse_apollo_url
+
+# Robust Import for Apollo Search (Optional/Sibling)
+try:
+    from .apollo_search import search_apollo
+except ImportError:
+    try:
+        from apollo_search import search_apollo
+    except ImportError:
+        pass
 
 load_dotenv()
 
