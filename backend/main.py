@@ -14,6 +14,19 @@ from backend.database import SessionLocal, engine, Base
 from backend.models import Run, Log
 from backend.tasks import run_script_task
 from backend.celery_app import celery_app
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+
+if os.getenv("SENTRY_DSN"):
+    sentry_sdk.init(
+        dsn=os.getenv("SENTRY_DSN"),
+        integrations=[
+            FastApiIntegration(),
+            SqlalchemyIntegration(),
+        ],
+        traces_sample_rate=1.0, 
+    )
 
 # Add current directory to sys.path
 import sys
@@ -142,6 +155,12 @@ def get_run_details(run_id: str, db: Session = Depends(get_db)):
         "run": run,
         "logs": logs_data
     }
+
+@app.get("/api/runs/{run_id}/leads")
+def get_run_leads(run_id: str, db: Session = Depends(get_db)):
+    from backend.models import Lead
+    leads = db.query(Lead).filter(Lead.run_id == run_id).all()
+    return {"leads": leads}
 
 @app.post("/api/execute")
 async def execute_script(request: ScriptExecutionRequest, db: Session = Depends(get_db)):

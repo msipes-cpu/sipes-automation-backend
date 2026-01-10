@@ -8,6 +8,8 @@ import time
 import requests
 from datetime import datetime
 from dotenv import load_dotenv
+from sqlalchemy import create_engine, Table, MetaData, insert
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Import our modules
 # Assuming execution directory is in path or we are running from root
@@ -100,64 +102,73 @@ def fetch_and_enrich_leads(apollo_url, limit=100, skip_enrichment=False):
                 
             print(f"Page {page}: Fetched {len(people)} raw leads. Enriching...")
             
-            # 3. Enrich Batch with Blitz
-            batch_verified = 0
+            print(f"Page {page}: Fetched {len(people)} raw leads. Enriching via ThreadPool...")
+            
+            # 3. Enrich Batch with Blitz (Parallel)
+            leads_to_process = []
             for lead in people:
                 lid = lead.get('id')
                 if lid in seen_ids:
                     continue
                 seen_ids.add(lid)
                 total_scanned += 1
+                leads_to_process.append(lead)
                 
-                # Check Global Scan Limit
                 if total_scanned > max_scan_limit:
                     print("Hit Max Scan Limit (5x target). Stopping safety brake.")
                     break
-
-                # Blitz Enrichment
-                linkedin_url = lead.get("linkedin_url")
-                email = None
+            
+            batch_verified = 0
+            
+            # Define helper for threading
+            def process_single_lead(lead_data):
+                l_new = lead_data.copy()
+                l_linkedin = l_new.get("linkedin_url")
+                l_email = None
                 
                 if skip_enrichment:
-                    # For preview, just use what we have or placeholder
-                    email = lead.get("email") or "preview@hidden.com"
-                elif linkedin_url:
+                    l_email = l_new.get("email") or "preview@hidden.com"
+                elif l_linkedin:
                     try:
-                        # Rate limit protection
-                        time.sleep(0.2) 
-                        
-                        b_resp = requests.post(BLITZ_API_URL, headers=blitz_headers, json={"linkedin_profile_url": linkedin_url})
+                        # minimal sleep for thread safety/rate matching
+                        time.sleep(0.1) 
+                        b_resp = requests.post(BLITZ_API_URL, headers=blitz_headers, json={"linkedin_profile_url": l_linkedin})
                         if b_resp.status_code == 200:
                             b_data = b_resp.json()
-                            # Prioritize work email
-                            email = b_data.get('work_email') or b_data.get('email')
-                            
-                            # Fallback to data object if needed
-                            if not email and 'data' in b_data and isinstance(b_data['data'], dict):
-                                email = b_data['data'].get('work_email') or b_data['data'].get('email')
-                        elif b_resp.status_code == 429:
-                            time.sleep(2)
+                            l_email = b_data.get('work_email') or b_data.get('email')
+                            if not l_email and 'data' in b_data and isinstance(b_data['data'], dict):
+                                l_email = b_data['data'].get('work_email') or b_data['data'].get('email')
                     except Exception as e:
-                        print(f"Blitz enrich error: {e}")
+                        print(f"Enrich Error: {e}")
                 
-                # Check Validity
-                if email and email.strip() and "unable" not in email.lower():
-                    lead['blitz_email'] = email
-                    verified_leads.append(lead)
-                    batch_verified += 1
-                
-                # Real-time Progress Update
-                # Format: [PROGRESS]: CurrentVerified/Target
-                if len(verified_leads) % 5 == 0 or len(verified_leads) >= limit:
-                    print(f"[PROGRESS]: {len(verified_leads)}/{limit}")
-                    sys.stdout.flush()
+                if l_email and l_email.strip() and "unable" not in l_email.lower():
+                    l_new['blitz_email'] = l_email
+                    return l_new
+                return None
 
-                # Stop if we hit target mid-batch
-                if len(verified_leads) >= limit:
-                    break
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                futures = [executor.submit(process_single_lead, l) for l in leads_to_process]
+                
+                for future in as_completed(futures):
+                    result = future.result()
+                    if result:
+                        verified_leads.append(result)
+                        batch_verified += 1
+                        
+                        # Real-time Update (Approximate due to threading)
+                        if len(verified_leads) % 5 == 0 or len(verified_leads) >= limit:
+                            print(f"[PROGRESS]: {len(verified_leads)}/{limit}")
+                            sys.stdout.flush()
+
+                    if len(verified_leads) >= limit:
+                        # Cancel remaining? Hard with ThreadPool, just break loop
+                        break
             
             print(f"Batch Result: {batch_verified} verified leads found in this batch.")
             
+            if len(verified_leads) >= limit:
+                break
+
             page += 1
             time.sleep(1) # Paging delay
             
@@ -168,10 +179,6 @@ def fetch_and_enrich_leads(apollo_url, limit=100, skip_enrichment=False):
     print(f"Final Count: Found {len(verified_leads)} verified leads after scanning {total_scanned}.")
     return verified_leads[:limit]
 
-def get_preview_leads(apollo_url):
-    """
-    Fetches 10 leads, enriches them, and masks emails for preview.
-    """
 def get_preview_leads(apollo_url):
     """
     Fetches 10 leads, enriches them, and masks emails for preview.
@@ -208,13 +215,51 @@ def get_preview_leads(apollo_url):
         clean_leads.append(new_lead)
         
     return clean_leads
+    return clean_leads
 
+def save_leads_to_db(leads):
+    run_id = os.getenv("RUN_ID")
+    db_url = os.getenv("DATABASE_URL")
+    
+    if not run_id or not db_url:
+        print("Skipping DB Save: No RUN_ID or DATABASE_URL.")
+        return
+
+    try:
+        print("Saving leads to database...")
+        engine = create_engine(db_url)
+        metadata = MetaData()
+        leads_table = Table('leads', metadata, autoload_with=engine)
+        
+        db_leads = []
+        for lead in leads:
+            db_leads.append({
+                "run_id": run_id,
+                "first_name": lead.get("first_name"),
+                "last_name": lead.get("last_name"),
+                "email": lead.get("blitz_email") or lead.get("email"),
+                "company": lead.get("organization", {}).get("name") or lead.get("company"),
+                "title": lead.get("title"),
+                "linkedin_url": lead.get("linkedin_url"),
+                "location": str(lead.get("country", "") or lead.get("state", "")),
+                "raw_data": lead
+            })
+            
+        with engine.connect() as conn:
+            conn.execute(insert(leads_table), db_leads)
+            conn.commit()
+        print(f"Successfully saved {len(db_leads)} leads to DB.")
+    except Exception as e:
+        print(f"DB Save Error: {e}")
 def run_orchestrator(apollo_url, target_email, limit=100):
     enriched_leads = fetch_and_enrich_leads(apollo_url, limit)
     
     if not enriched_leads:
         print("No enriched leads to export.")
         return
+
+    # 4. Save to DB
+    save_leads_to_db(enriched_leads)
 
     # 5. Export to Google Sheets
     # Retrieve fieldnames
@@ -284,8 +329,7 @@ def run_orchestrator(apollo_url, target_email, limit=100):
         sys.exit(1)
         
     # Cleanup
-    if os.path.exists(temp_csv):
-        os.remove(temp_csv)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

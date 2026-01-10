@@ -48,6 +48,7 @@ def run_script_task(self, script_name: str, args: List[str], env_vars: Dict[str,
     # Merge Env Vars
     current_env = os.environ.copy()
     current_env.update(env_vars)
+    current_env["RUN_ID"] = run_id
     if "API_BASE_URL" not in current_env:
         # Default to internal container network or localhost
         current_env["API_BASE_URL"] = "http://localhost:8000/api"

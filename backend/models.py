@@ -17,6 +17,7 @@ class Run(Base):
     env_vars = Column(Text, nullable=True) # JSON Object string
 
     logs = relationship("Log", back_populates="run")
+    leads = relationship("Lead", back_populates="run")
 
 class Log(Base):
     __tablename__ = "logs"
@@ -28,3 +29,21 @@ class Log(Base):
     data = Column(Text) # JSON string
 
     run = relationship("Run", back_populates="logs")
+
+class Lead(Base):
+    __tablename__ = "leads"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    run_id = Column(String, ForeignKey("runs.run_id")) # Link to the job run
+    
+    first_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    company = Column(String, nullable=True)
+    title = Column(String, nullable=True)
+    linkedin_url = Column(String, nullable=True)
+    location = Column(String, nullable=True)
+    # Flexible store
+    raw_data = Column(JSON, nullable=True)
+
+    run = relationship("Run", back_populates="leads")
