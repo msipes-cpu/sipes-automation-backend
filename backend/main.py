@@ -427,6 +427,9 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
             try:
                 conn.execute("INSERT INTO runs (run_id, script_name, status, start_time) VALUES (?, ?, ?, ?)",
                         (run_id, "lead_gen_orchestrator.py", "QUEUED", datetime.utcnow().isoformat()))
+                # Log the Session ID to allow frontend lookup
+                conn.execute("INSERT INTO logs (run_id, timestamp, event_type, data) VALUES (?, ?, ?, ?)",
+                          (run_id, datetime.utcnow().isoformat(), "STRIPE_SESSION_ID", json.dumps({"session_id": session['id']})))
                 conn.commit()
             finally:
                 conn.close()
@@ -443,6 +446,20 @@ async def stripe_webhook(request: Request, background_tasks: BackgroundTasks):
             print(f"Job started: {run_id}")
 
     return {"status": "success"}
+
+@app.get("/api/runs/lookup")
+def lookup_run(session_id: str):
+    conn = get_db_connection()
+    try:
+        # Simple LIKE query to find the session_id in the JSON data column
+        cursor = conn.execute("SELECT run_id FROM logs WHERE event_type='STRIPE_SESSION_ID' AND data LIKE ?", (f'%"{session_id}"%',))
+        row = cursor.fetchone()
+        if row:
+            return {"run_id": row[0]}
+    finally:
+        conn.close()
+    
+    raise HTTPException(status_code=404, detail="Run not found for this session")
 
 if __name__ == "__main__":
     import uvicorn
