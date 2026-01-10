@@ -14,11 +14,19 @@ import time
 
 # Add current directory to sys.path to ensure module resolution
 sys.path.append(os.getcwd())
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 import stripe
+
+# Try bare import first (if main.py is root), then package import
 try:
-    from backend.email_service import send_job_completion_email, send_job_failure_email
-except ImportError:
     from email_service import send_job_completion_email, send_job_failure_email
+except ImportError:
+    try:
+        from backend.email_service import send_job_completion_email, send_job_failure_email
+    except ImportError as e:
+        print(f"CRITICAL: Could not import email_service. CWD: {os.getcwd()}, LS: {os.listdir(os.getcwd())}")
+        raise e
 
 # Imports for Telegram Bot handled inside startup_event to avoid top-level side effects/errors
 
