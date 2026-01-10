@@ -23,3 +23,10 @@ uvicorn
 python-multipart
 python-dotenv
 stripe
+
+# Database & Queue
+psycopg2-binary
+sqlalchemy
+celery
+redis
+sentry-sdk
