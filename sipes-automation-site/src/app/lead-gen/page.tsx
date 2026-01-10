@@ -443,7 +443,12 @@ function LeadGenContent() {
                                                 ></div>
                                             </div>
                                             <p className="text-xs text-blue-600 mt-1 italic">
-                                                Enriching leads... this can take a few minutes.
+                                                {limit && (
+                                                    <span className="font-semibold mr-1">
+                                                        Est. time: {Math.ceil(limit * 1.5) > 60 ? `~${Math.ceil((limit * 1.5) / 60)} mins` : `~${Math.ceil(limit * 1.5)} secs`}.
+                                                    </span>
+                                                )}
+                                                Enriching leads... this process verifies every single email.
                                             </p>
                                         </div>
                                     )}
