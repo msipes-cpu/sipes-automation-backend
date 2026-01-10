@@ -11,15 +11,8 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the backend server code
-COPY backend/main.py .
-COPY backend/telegram_bot.py .
-COPY backend/email_service.py .
-COPY backend/database.py .
-COPY backend/models.py .
-COPY backend/celery_app.py .
-COPY backend/tasks.py .
-COPY backend/worker.py .
-COPY backend/start.sh .
+# Copy the backend code as a package
+COPY backend/ ./backend/
 
 # Copy the execution scripts
 # valid when building from project root
@@ -31,10 +24,10 @@ COPY inboxbench/ ./inboxbench/
 RUN mkdir -p .tmp marketing
 
 # Make start script executable
-RUN chmod +x start.sh
+RUN chmod +x backend/start.sh
 
 # Expose the port
 EXPOSE 8000
 
 # Run the application using the startup script (Worker + Web)
-CMD ["./start.sh"]
+CMD ["./backend/start.sh"]
