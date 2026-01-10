@@ -44,7 +44,7 @@ BLITZ_API_URL = "https://api.blitz-api.ai/api/enrichment/email"
 APOLLO_API_KEY = os.getenv("APOLLO_API_KEY")
 BLITZ_API_KEY = os.getenv("BLITZ_API_KEY")
 
-def fetch_and_enrich_leads(apollo_url, limit=100):
+def fetch_and_enrich_leads(apollo_url, limit=100, skip_enrichment=False):
     print(f"Starting Fetch for URL: {apollo_url}")
     print(f"Target Verified Leads: {limit}")
 
@@ -118,7 +118,10 @@ def fetch_and_enrich_leads(apollo_url, limit=100):
                 linkedin_url = lead.get("linkedin_url")
                 email = None
                 
-                if linkedin_url:
+                if skip_enrichment:
+                    # For preview, just use what we have or placeholder
+                    email = lead.get("email") or "preview@hidden.com"
+                elif linkedin_url:
                     try:
                         # Rate limit protection
                         time.sleep(0.2) 
@@ -169,7 +172,11 @@ def get_preview_leads(apollo_url):
     """
     Fetches 10 leads, enriches them, and masks emails for preview.
     """
-    leads = fetch_and_enrich_leads(apollo_url, limit=10)
+def get_preview_leads(apollo_url):
+    """
+    Fetches 10 leads, enriches them, and masks emails for preview.
+    """
+    leads = fetch_and_enrich_leads(apollo_url, limit=10, skip_enrichment=True)
     
     # Mask emails
     for lead in leads:
