@@ -155,7 +155,26 @@ def run_orchestrator(apollo_url, target_email, limit=100):
     keys = set()
     for l in enriched_leads:
         keys.update(l.keys())
-    fieldnames = sorted(list(keys))
+    
+    # Custom Column Logic
+    # 1. DELETE unwanted columns
+    # Note: We try to match user request. Apollo keys are usually snake_case. 
+    # checking for 'account', 'account_id', 'awards', 'email' (original)
+    unwanted = {'account', 'account_id', 'awards', 'email', 'organization_id', 'breadcrumbs'} 
+    # Added organization_id/breadcrumbs as they are often clutter too, but sticking strictly to user request mainly
+    # User asked for: Account, account ID, Awards, email
+    
+    # We filter keys effectively
+    filtered_keys = [k for k in keys if k not in unwanted and k.lower() not in ['account', 'account id', 'awards']]
+
+    # 2. REORDER: first_name, last_name, blitz_email at the front
+    priority = ['first_name', 'last_name', 'blitz_email']
+    
+    # Remove priority keys from general pool to avoid dupes
+    remaining = [k for k in filtered_keys if k not in priority]
+    remaining.sort()
+    
+    fieldnames = priority + remaining
     
     # Prepare data list of lists for gspread (handled by export_leads logic usually, but export_leads.py works on CSV/JSON)
     # Let's use export_leads.py via subprocess to ensure we use the logic we just fixed (DWD, etc)
