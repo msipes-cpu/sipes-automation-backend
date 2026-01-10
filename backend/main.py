@@ -15,6 +15,11 @@ import time
 # Add current directory to sys.path to ensure module resolution
 sys.path.append(os.getcwd())
 import stripe
+try:
+    from backend.email_service import send_job_completion_email, send_job_failure_email
+except ImportError:
+    from email_service import send_job_completion_email, send_job_failure_email
+
 # Imports for Telegram Bot handled inside startup_event to avoid top-level side effects/errors
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -125,6 +130,45 @@ def worker_loop():
                 
                 # Run Task (Blocking)
                 run_script_task(script_name, args, env_vars, run_id)
+                
+                # Check outcome and Send Email
+                # We need to re-fetch the run status and logs to find the Sheet URL
+                conn = get_db_connection()
+                run = conn.execute("SELECT * FROM runs WHERE run_id = ?", (run_id,)).fetchone()
+                
+                # Extract Email from args if present (convention: --email flag)
+                recipient_email = None
+                if "--email" in args:
+                    try:
+                        idx = args.index("--email")
+                        recipient_email = args[idx+1]
+                    except: pass
+                
+                if run and run['status'] == 'COMPLETED':
+                    # Search logs for Sheet URL
+                    logs = conn.execute("SELECT data FROM logs WHERE run_id = ? AND event_type='SCRIPT_OUTPUT'", (run_id,)).fetchall()
+                    sheet_url = None
+                    for log in logs:
+                        try:
+                            log_content = json.loads(log[0])
+                            stdout = log_content.get('stdout', '')
+                            # Regex or string search for "Sheet URL:"
+                            if "Sheet URL:" in stdout:
+                                parts = stdout.split("Sheet URL:")
+                                if len(parts) > 1:
+                                    sheet_url = parts[1].strip()
+                        except: pass
+                    
+                    if recipient_email and sheet_url:
+                        print(f"[Worker] Sending completion email to {recipient_email}")
+                        send_job_completion_email(recipient_email, sheet_url)
+                
+                elif run and run['status'] == 'FAILED' and recipient_email:
+                     print(f"[Worker] Sending failure email to {recipient_email}")
+                     send_job_failure_email(recipient_email, "Script failed to execute correctly.")
+                     
+                conn.close()
+
             else:
                 time.sleep(2) # Poll delay
         except Exception as e:
