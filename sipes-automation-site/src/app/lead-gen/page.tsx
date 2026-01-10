@@ -25,6 +25,7 @@ function LeadGenContent() {
     const [price, setPrice] = useState<number>(0);
     const [paymentSessionId, setPaymentSessionId] = useState<string | null>(null);
     const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
+    const [progress, setProgress] = useState(0);
 
     // Calculate price
     useEffect(() => {

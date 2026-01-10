@@ -136,6 +136,13 @@ def fetch_and_enrich_leads(apollo_url, limit=100):
             lead['blitz_email'] = email
             enriched_leads.append(lead)
         
+        # Progress Update
+        # We base progress on 'processed' vs 'total found'
+        # Emitting [PROGRESS]: X/Y
+        if (i+1) % 5 == 0 or (i+1) == len(all_leads):
+            print(f"[PROGRESS]: {i+1}/{len(all_leads)}")
+            sys.stdout.flush() # Ensure it sends immediately
+
         if (i+1) % 10 == 0:
             print(f"Enriched {i+1}/{len(all_leads)}...")
 
