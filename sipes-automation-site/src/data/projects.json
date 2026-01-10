@@ -1,0 +1,266 @@
+[
+  {
+    "id": "e4ba22c3-9844-4b8c-b715-18115668a623",
+    "title": "Airtable + Make.com Roofing App Backend",
+    "description": "Enhanced workflow by linking inspection photos to jobs, automated captioning based on inputs, and prepared systems for PDF report automation.",
+    "industry": "Construction & Roofing",
+    "technologies": [
+      "Airtable",
+      "Make.com"
+    ],
+    "image_url": "",
+    "live_url": "",
+    "upwork_job_url": "",
+    "featured": true,
+    "slug": "airtable-makecom-roofing-app-backend"
+  },
+  {
+    "id": "e4ba22c3-9844-4b8c-b715-18115668a624",
+    "title": "Go High Level & Business Automation Ecosystem",
+    "description": "Led the integration and automation of core platforms (Go High Level, Accelo, Microsoft 365) to enable operational excellence for HR consulting firm.",
+    "industry": "HR & Corporate Services",
+    "technologies": [
+      "Go High Level",
+      "Accelo",
+      "Microsoft 365",
+      "Zapier"
+    ],
+    "image_url": "",
+    "live_url": "",
+    "upwork_job_url": "",
+    "featured": true,
+    "slug": "go-high-level-and-business-automation-ecosystem"
+  },
+  {
+    "id": "e4ba22c3-9844-4b8c-b715-18115668a625",
+    "title": "Email Deliverability Optimization",
+    "description": "Optimized email infrastructure using GlockApps and GoHighLevel to maximize delivery scores and ensure inbox placement.",
+    "industry": "Marketing Tech",
+    "technologies": [
+      "GlockApps",
+      "GoHighLevel"
+    ],
+    "image_url": "",
+    "live_url": "",
+    "upwork_job_url": "",
+    "featured": true,
+    "slug": "email-deliverability-optimization"
+  },
+  {
+    "id": "e4ba22c3-9844-4b8c-b715-18115668a626",
+    "title": "Podcast Automation Training",
+    "description": "Guided client in building an automated daily news podcast system using Relay.app/Make.com and AI voice generation, focusing on knowledge transfer and implementation.",
+    "industry": "Media & Podcasting",
+    "technologies": [
+      "Relay.app",
+      "Make.com",
+      "ElevenLabs",
+      "AI Agents"
+    ],
+    "image_url": "",
+    "live_url": "",
+    "upwork_job_url": "",
+    "featured": true,
+    "slug": "podcast-automation-training"
+  },
+  {
+    "id": "e4ba22c3-9844-4b8c-b715-18115668a627",
+    "title": "Sales Tech & CRM Specialist",
+    "description": "Streamlined messy CRMs and built automated sales machines for fast-scaling companies. Organized pipelines, set up workflows, and brought clarity to sales ops.",
+    "industry": "Sales Operations",
+    "technologies": [
+      "HubSpot",
+      "Pipedrive",
+      "GoHighLevel"
+    ],
+    "image_url": "",
+    "live_url": "",
+    "upwork_job_url": "",
+    "featured": true,
+    "slug": "sales-tech-and-crm-specialist"
+  },
+  {
+    "id": "e4ba22c3-9844-4b8c-b715-18115668a628",
+    "title": "LinkedIn Lead Generation & Verification",
+    "description": "Automated the extraction of LinkedIn data, performed email verification, and delivered clean leads to Airtable/CSV using Make.com and n8n.",
+    "industry": "Lead Generation",
+    "technologies": [
+      "Make.com",
+      "n8n",
+      "Airtable",
+      "LinkedIn Scraping"
+    ],
+    "image_url": "",
+    "live_url": "",
+    "upwork_job_url": "",
+    "featured": true,
+    "slug": "linkedin-lead-generation-and-verification"
+  },
+  {
+    "id": "e4ba22c3-9844-4b8c-b715-18115668a629",
+    "title": "Meta CAPI + ManyChat Data Tracking",
+    "description": "Built a system to track Qualified Leads in Meta Ads using ManyChat Webhooks and the Conversions API (CAPI) for real-time ad optimization.",
+    "industry": "Digital Advertising",
+    "technologies": [
+      "Meta CAPI",
+      "ManyChat",
+      "Webhooks",
+      "Facebook Pixel"
+    ],
+    "image_url": "",
+    "live_url": "",
+    "upwork_job_url": "",
+    "featured": true,
+    "slug": "meta-capi-manychat-data-tracking"
+  },
+  {
+    "id": "e4ba22c3-9844-4b8c-b715-18115668a630",
+    "title": "Airtable Manufacturing Job Tracker",
+    "description": "Digitizing CNC manufacturing workflows by upgrading from whiteboard scheduling to a custom Airtable system. Features manual & auto-scheduling, machine loading dashboards, and RFQ automation.",
+    "industry": "Manufacturing",
+    "technologies": [
+      "Airtable",
+      "Interfaces",
+      "Automations",
+      "Email Parsing"
+    ],
+    "image_url": "",
+    "live_url": "",
+    "upwork_job_url": "",
+    "featured": true,
+    "slug": "airtable-manufacturing-job-tracker"
+  },
+  {
+    "id": "e4ba22c3-9844-4b8c-b715-18115668a631",
+    "title": "AI Manufacturing Scheduling Agent",
+    "description": "Developing an AI-driven scheduling system to optimize manufacturing workflows. Coordinates employee breaks to ensure continuous machine operation and generates daily production schedules based on volume inputs.",
+    "industry": "Manufacturing",
+    "technologies": [
+      "AI Agents",
+      "Production Scheduling",
+      "Workflow Automation"
+    ],
+    "image_url": "",
+    "live_url": "",
+    "upwork_job_url": "",
+    "featured": true,
+    "slug": "ai-manufacturing-scheduling-agent"
+  },
+  {
+    "id": "e4ba22c3-9844-4b8c-b715-18115668a632",
+    "title": "Zapier Automation & Workflow Optimization",
+    "description": "Streamlining business processes by designing and optimizing automated workflows. Integrating various applications via Zapier to improve efficiency and save resources.",
+    "industry": "Business Operations",
+    "technologies": [
+      "Zapier",
+      "Workflow Automation",
+      "Process Improvement"
+    ],
+    "image_url": "",
+    "live_url": "",
+    "upwork_job_url": "",
+    "featured": true,
+    "slug": "zapier-automation-and-workflow-optimization"
+  },
+  {
+    "id": "e4ba22c3-9844-4b8c-b715-18115668a633",
+    "title": "AI Bookkeeping & CFO Automation",
+    "description": "Streamlining financial workflows for eCommerce bookkeeping firm using Zapier, Make.com, and ChatGPT. Automating invoice processing, revenue tracking, and subscription forecasting.",
+    "industry": "Financial Services",
+    "technologies": [
+      "Zapier",
+      "Make.com",
+      "ChatGPT",
+      "QuickBooks Online",
+      "Stripe"
+    ],
+    "image_url": "",
+    "live_url": "",
+    "upwork_job_url": "",
+    "featured": true,
+    "slug": "ai-bookkeeping-and-cfo-automation"
+  },
+  {
+    "id": "e4ba22c3-9844-4b8c-b715-18115668a634",
+    "title": "WhatsApp Wati CRM & Lead Integration",
+    "description": "Integrated Wati API with Facebook/Instagram Lead Forms and Google Sheets via Zapier. Set up automated lead routing, welcome messages, and appointment booking flows.",
+    "industry": "Conversational Marketing",
+    "technologies": [
+      "Wati API",
+      "WhatsApp Automation",
+      "Facebook Leads",
+      "Zapier"
+    ],
+    "image_url": "",
+    "live_url": "",
+    "upwork_job_url": "",
+    "featured": true,
+    "slug": "whatsapp-wati-crm-and-lead-integration"
+  },
+  {
+    "id": "e4ba22c3-9844-4b8c-b715-18115668a635",
+    "title": "ChatGPT & Google Calendar AI Assistant",
+    "description": "Integrated ChatGPT with Google Calendar and Email via Zapier to creating an intelligent daily briefing system. Automates schedule analysis and generates smart daily reminders.",
+    "industry": "Productivity",
+    "technologies": [
+      "ChatGPT",
+      "Zapier",
+      "Google Calendar",
+      "Gmail"
+    ],
+    "image_url": "",
+    "live_url": "",
+    "upwork_job_url": "",
+    "featured": true,
+    "slug": "chatgpt-and-google-calendar-ai-assistant"
+  },
+  {
+    "id": "e4ba22c3-9844-4b8c-b715-18115668a636",
+    "title": "Roofing Agency Onboarding Automation",
+    "description": "Implemented full onboarding automation for a Roofing Agency. Contracts trigger folder creation, CRM updates, and team notifications, saving 15 hours per week.",
+    "industry": "Roofing Agency",
+    "technologies": [
+      "Zapier",
+      "GoHighLevel",
+      "Google Drive",
+      "Slack"
+    ],
+    "image_url": "",
+    "live_url": "",
+    "upwork_job_url": "",
+    "featured": true,
+    "slug": "roofing-agency-onboarding"
+  },
+  {
+    "id": "e4ba22c3-9844-4b8c-b715-18115668a637",
+    "title": "Lead Gen Speed-to-Lead System",
+    "description": "Reduced lead response time from 4 hours to 5 seconds. Implemented instant SMS/Email follow-up and CRM syncing, increasing close rates from 15% to 25%.",
+    "industry": "Lead Gen Agency",
+    "technologies": [
+      "Make.com",
+      "Twilio",
+      "HubSpot"
+    ],
+    "image_url": "",
+    "live_url": "",
+    "upwork_job_url": "",
+    "featured": true,
+    "slug": "lead-gen-speed-to-lead"
+  },
+  {
+    "id": "e4ba22c3-9844-4b8c-b715-18115668a638",
+    "title": "SEO Agency Automated Reporting",
+    "description": "Eliminated manual reporting by automating data collection from GSC, Ahrefs, and GA4 into a centralized dashboard. Saved the founder 120 hours/year.",
+    "industry": "SEO Agency",
+    "technologies": [
+      "Looker Studio",
+      "Supermetrics",
+      "Google Sheets"
+    ],
+    "image_url": "",
+    "live_url": "",
+    "upwork_job_url": "",
+    "featured": true,
+    "slug": "seo-agency-reporting"
+  }
+]

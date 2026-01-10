@@ -1,0 +1,58 @@
+[
+  {
+    "id": "f5a3b2c1-8844-4b8c-b715-18115668a734",
+    "created_at": "2025-10-07T12:00:00Z",
+    "client_name": "Roofing App Client",
+    "client_role": "Client",
+    "client_company": "Upwork",
+    "content": "Perfect communication and execution! Thank you so much Michael I can’t wait to work again in the future",
+    "rating": 5,
+    "source": "Upwork",
+    "is_featured": true,
+    "is_verified": true,
+    "project_id": "e4ba22c3-9844-4b8c-b715-18115668a623",
+    "project_title": "Airtable + Make.com Roofing App Backend"
+  },
+  {
+    "id": "f5a3b2c1-8844-4b8c-b715-18115668a735",
+    "created_at": "2025-08-19T12:00:00Z",
+    "client_name": "Envision Benefits Group",
+    "client_role": "Client",
+    "client_company": "Upwork",
+    "content": "5.0 Star Rating - Successfully integrated and automated core business platforms.",
+    "rating": 5,
+    "source": "Upwork",
+    "is_featured": true,
+    "is_verified": true,
+    "project_id": "e4ba22c3-9844-4b8c-b715-18115668a624",
+    "project_title": "Go High Level & Business Automation Ecosystem"
+  },
+  {
+    "id": "f5a3b2c1-8844-4b8c-b715-18115668a736",
+    "created_at": "2025-08-13T12:00:00Z",
+    "client_name": "Podcast Automation Client",
+    "client_role": "Client",
+    "client_company": "Upwork",
+    "content": "Michael was great! Easy to work with and did exactly what I needed. He had the expertise he claimed to have. Good communication skills. Highly recommend.",
+    "rating": 5,
+    "source": "Upwork",
+    "is_featured": true,
+    "is_verified": true,
+    "project_id": "e4ba22c3-9844-4b8c-b715-18115668a626",
+    "project_title": "Podcast Automation Training"
+  },
+  {
+    "id": "f5a3b2c1-8844-4b8c-b715-18115668a737",
+    "created_at": "2025-06-23T12:00:00Z",
+    "client_name": "Antony Draper",
+    "client_role": "Growth Consultant",
+    "client_company": "Upwork",
+    "content": "Michael has been an invaluable asset to our team. He consistently brought clarity, precision, and proactive problem-solving to every aspect of our systems. He played a key role in streamlining our tech stack and elevating our CRM workflows.",
+    "rating": 5,
+    "source": "Upwork",
+    "is_featured": true,
+    "is_verified": true,
+    "project_id": "e4ba22c3-9844-4b8c-b715-18115668a627",
+    "project_title": "Sales Tech & CRM Specialist"
+  }
+]

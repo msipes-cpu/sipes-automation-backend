@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), sans-serif;
+  --font-mono: var(--font-jetbrains-mono), monospace;
+  --font-display: var(--font-space-grotesk), sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+:root {
+  /* Mission Control Theme */
+  --background: #0B1120;
+  /* Deep Space Blue */
+  --foreground: #F8FAFC;
+  /* Stark White */
+
+  --card: #111827;
+  /* Darker Blue-Gray */
+  --card-foreground: #F8FAFC;
+
+  --popover: #111827;
+  --popover-foreground: #F8FAFC;
+
+  --primary: #10B981;
+  /* Terminal Green */
+  --primary-foreground: #064E3B;
+
+  --secondary: #1E293B;
+  /* Slate 800 */
+  --secondary-foreground: #F8FAFC;
+
+  --muted: #1E293B;
+  --muted-foreground: #94A3B8;
+  /* Slate 400 */
+
+  --accent: #1E293B;
+  --accent-foreground: #10B981;
+
+  --destructive: #EF4444;
+  /* Critical Red */
+  --destructive-foreground: #F8FAFC;
+
+  --border: #1E293B;
+  --input: #1E293B;
+  --ring: #10B981;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+}
+
+/* Custom Utilities */
+@layer utilities {
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+
+  .glass-panel {
+    background-color: rgba(17, 24, 39, 0.5);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(30, 41, 59, 0.5);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .tech-border {
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    position: relative;
+  }
+
+  .tech-border::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-top: 1px solid rgb(16, 185, 129);
+    border-right: 1px solid rgb(16, 185, 129);
+    opacity: 0.5;
+  }
+
+  .tech-border::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-bottom: 1px solid rgb(16, 185, 129);
+    border-left: 1px solid rgb(16, 185, 129);
+    opacity: 0.5;
+  }
+}
