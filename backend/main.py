@@ -327,5 +327,5 @@ async def process_apollo_url(request: LeadGenRequest, background_tasks: Backgrou
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
-    print(f"Starting server on port {port}...")
+    print(f"Force Redeploy: Starting server on port {port}...")
     uvicorn.run(app, host="0.0.0.0", port=port)
