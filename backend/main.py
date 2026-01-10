@@ -363,10 +363,6 @@ async def create_checkout_session(request: LeadGenRequest):
                 'quantity': 1,
             }],
             mode='payment',
-            success_url=request.url + '?success=true&run_id={CHECKOUT_SESSION_ID}', # Frontend URL logic needs to handle this.
-            # Actually success_url should be the frontend URL.
-            # We don't know the exact frontend URL here easily unless passed or env.
-            # Let's assume request.url is the Apollo URL, NOT the frontend URL. 
             # We need the Frontend Origin.
             success_url=os.getenv("FRONTEND_URL", "https://sipes-automation-frontend-production.up.railway.app/lead-gen") + "?success=true&session_id={CHECKOUT_SESSION_ID}",
             cancel_url=os.getenv("FRONTEND_URL", "https://sipes-automation-frontend-production.up.railway.app/lead-gen") + "?canceled=true",
