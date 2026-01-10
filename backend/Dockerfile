@@ -27,4 +27,6 @@ RUN mkdir -p .tmp marketing
 EXPOSE 8000
 
 # Run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the application
+# Use python directly to handle PORT env var programmatically
+CMD ["python3", "main.py"]
