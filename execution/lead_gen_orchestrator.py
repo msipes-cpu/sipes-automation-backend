@@ -194,16 +194,27 @@ def run_orchestrator(apollo_url, target_email, limit=100):
     # We call the main block logic or re-implement export call here.
     # Re-implementing is safer to control the flow.
     
+    # ... (Export Logic)
     try:
-        # Import dynamic
         import gspread
         from google.oauth2.service_account import Credentials
         
-        SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE") or "credentials.json"
         SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
         IMPERSONATE_EMAIL = os.getenv("GOOGLE_IMPERSONATE_EMAIL")
         
-        creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+        creds = None
+        google_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
+        
+        if google_json:
+            creds = Credentials.from_service_account_info(json.loads(google_json), scopes=SCOPES)
+        else:
+            SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE") or "credentials.json"
+            if os.path.exists(SERVICE_ACCOUNT_FILE):
+                creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+            else:
+                print("Error: Google Credentials not found. Set GOOGLE_CREDENTIALS_JSON or provide credentials.json")
+                sys.exit(1)
+
         if IMPERSONATE_EMAIL:
             creds = creds.with_subject(IMPERSONATE_EMAIL)
             
@@ -218,13 +229,10 @@ def run_orchestrator(apollo_url, target_email, limit=100):
             sh.share(target_email, perm_type='user', role='writer')
             
         # Write data
-        # gspread expects list of lists
         worksheet = sh.get_worksheet(0)
-        
         rows = [fieldnames]
         for lead in enriched_leads:
             rows.append([str(lead.get(k, "")) for k in fieldnames])
-            
         worksheet.update(rows)
         
         print(f"SUCCESS: Sheet created and shared.")
@@ -232,6 +240,7 @@ def run_orchestrator(apollo_url, target_email, limit=100):
         
     except Exception as e:
         print(f"Export Error: {e}")
+        sys.exit(1)
         
     # Cleanup
     if os.path.exists(temp_csv):
