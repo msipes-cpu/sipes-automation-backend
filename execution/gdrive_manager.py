@@ -15,6 +15,12 @@ def get_drive_service():
     """Initialize and return Google Drive service."""
     if os.path.exists(SERVICE_ACCOUNT_FILE):
         creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+        
+        impersonate_email = os.getenv("GOOGLE_IMPERSONATE_EMAIL")
+        if impersonate_email:
+            print(f"Impersonating: {impersonate_email}")
+            creds = creds.with_subject(impersonate_email)
+            
         service = build('drive', 'v3', credentials=creds)
         return service
     else:

@@ -19,6 +19,12 @@ SCOPES = [
 def get_service():
     if os.path.exists(SERVICE_ACCOUNT_FILE):
         creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+        
+        impersonate_email = os.getenv("GOOGLE_IMPERSONATE_EMAIL")
+        if impersonate_email:
+            print(f"Impersonating: {impersonate_email}")
+            creds = creds.with_subject(impersonate_email)
+            
         client = gspread.authorize(creds)
         return client
     else:

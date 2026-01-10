@@ -20,8 +20,8 @@ This directive outlines the process for generating leads using Apollo, verifying
     - **Step 0d - In-Depth**: Agent asks clarifying questions (Employee count, Revenue, Specific keywords, etc.) before proceeding.
 
 1.  **Search Apollo**
-    - Run `execution/apollo_search.py` with the determined criteria.
-    - Output: A JSON list of lead objects (or a path to a temp file containing them).
+    - Run `execution/apollo_search.py` (or custom variants) with the determined criteria.
+    - Output: A **CSV file** with a timestamped filename (e.g., `apollo_leads_20241012_1430.csv`) containing the leads. **Do not use JSON for final output.**
 
 2.  **Verify Emails**
     - Take the list of leads from Step 1.

@@ -35,6 +35,10 @@ Before writing a script, check `execution/` per your directive. Only create new 
 - Update the directive with what you learned (API limits, timing, edge cases)
 - Example: you hit an API rate limit → you then look into API → find a batch endpoint that would fix → rewrite script to accommodate → test → update directive.
 
+**4. User Preferences & Standards**
+- **Lead Lists**: ALWAYS output lead lists as **CSV** files.
+- **Naming Convention**: For lead lists, ALWAYS include a timestamp (e.g., `leads_source_YYYYMMDD_HHMM.csv`) to prevent overwriting and allow tracking.
+
 **3. Update directives as you learn**
 Directives are living documents. When you discover API constraints, better approaches, common errors, or timing expectations—update the directive. But don't create or overwrite directives without asking unless explicitly told to. Directives are your instruction set and must be preserved (and improved upon over time, not extemporaneously used and then discarded).
 
