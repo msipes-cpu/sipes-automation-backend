@@ -42,7 +42,7 @@ function LeadGenContent() {
         setPrice(parseFloat(calc.toFixed(2)));
     }, [limit]);
 
-    // Check for Return from Stripe
+    // Check for Return from Stripe or Direct Run ID
     useEffect(() => {
         const success = searchParams.get("success");
         const sessionId = searchParams.get("session_id");
@@ -64,7 +64,11 @@ function LeadGenContent() {
             }
 
             // Clear params to look clean
-            router.replace("/lead-gen");
+            router.replace("/tools/lead-gen");
+        } else if (runIdParam) {
+            // Direct access (e.g. Test Mode)
+            setRunId(runIdParam);
+            setStatus("processing");
         }
     }, [searchParams, router]);
 
