@@ -7,7 +7,8 @@ const getBackendUrl = () => {
     return url.endsWith('/') ? url.slice(0, -1) : url;
 };
 
-async function handler(req: NextRequest, { params }: { params: { path: string[] } }) {
+async function handler(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+    const resolvedParams = await params;
     const backendBase = getBackendUrl();
 
     if (!backendBase) {
@@ -28,7 +29,7 @@ async function handler(req: NextRequest, { params }: { params: { path: string[] 
     // params.path = ["api", "leads", "test-run"]
     // Target: {BACKEND_URL}/api/leads/test-run
 
-    const path = params.path.join("/");
+    const path = resolvedParams.path.join("/");
     const searchParams = req.nextUrl.search; // includes ?admin_key=...
     const targetUrl = `${backendBase}/api/${path}${searchParams}`;
     // Wait, if path already includes 'api', we shouldn't add it again if the backend url doesn't have it.
