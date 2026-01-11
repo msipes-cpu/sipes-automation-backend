@@ -89,7 +89,7 @@ function LeadGenContent() {
             setPreviewData(data.leads || []);
         } catch (err: any) {
             console.error(err);
-            setErrorMsg(err.message || "Failed to load preview. Please check the URL.");
+            setErrorMsg(`Connection Error to [${API_BASE_URL}]: ${err.message || "Network Error"}. Check console.`);
             setStatus("error");
         } finally {
             setPreviewLoading(false);

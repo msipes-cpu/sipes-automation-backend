@@ -35,9 +35,12 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 app = FastAPI(title="Sipes Automation Backend", version="2.0.0")
 
-app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Strict list in prod
+    allow_origins=[
+        "http://localhost:3000",
+        "https://www.sipesautomation.com",
+        "https://sipes-automation-site.up.railway.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -58,7 +61,25 @@ async def startup_event():
     
     # Ensure Tables Exist (Safe to run on restart)
     try:
+        from sqlalchemy import text
         Base.metadata.create_all(bind=engine)
+        
+        # Auto-Migration for 'args' and 'env_vars' in 'runs' table
+        with engine.connect() as conn:
+            try:
+                conn.execute(text("SELECT args FROM runs LIMIT 1"))
+            except Exception:
+                print("Migrating DB: Adding 'args' column...")
+                conn.execute(text("ALTER TABLE runs ADD COLUMN args TEXT"))
+                conn.commit()
+
+            try:
+                conn.execute(text("SELECT env_vars FROM runs LIMIT 1"))
+            except Exception:
+                print("Migrating DB: Adding 'env_vars' column...")
+                conn.execute(text("ALTER TABLE runs ADD COLUMN env_vars TEXT"))
+                conn.commit()
+                
     except Exception as e:
         print(f"DB Init Warning: {e}")
 

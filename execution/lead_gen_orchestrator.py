@@ -10,6 +10,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, Table, MetaData, insert
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import redis
+import hashlib
 
 # Import our modules
 # Assuming execution directory is in path or we are running from root
@@ -89,20 +91,51 @@ def fetch_and_enrich_leads(apollo_url, limit=100, skip_enrichment=False):
         
         # 2. Search Apollo Batch
         payload["page"] = page
-        try:
-            print(f"Searching Apollo Page {page}...")
-            resp = requests.post(APOLLO_API_URL, headers=headers, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-            people = data.get("people", [])
-            
-            if not people:
-                print("No more leads found in Apollo.")
-                break
+        
+        # Cache Check
+        people = []
+        cache_key = None
+        redis_client = None
+        redis_url = os.getenv("REDIS_URL")
+        
+        if redis_url:
+            try:
+                redis_client = redis.Redis.from_url(redis_url, decode_responses=True)
+                # Create a stable fingerprint of the payload
+                payload_str = json.dumps(payload, sort_keys=True)
+                payload_hash = hashlib.sha256(payload_str.encode()).hexdigest()
+                cache_key = f"apollo_search:{payload_hash}"
                 
-            print(f"Page {page}: Fetched {len(people)} raw leads. Enriching...")
+                cached_data = redis_client.get(cache_key)
+                if cached_data:
+                    print(f"[CACHE] Hit for page {page}")
+                    data = json.loads(cached_data)
+                    people = data.get("people", [])
+            except Exception as e:
+                print(f"Redis Error: {e}")
+                redis_client = None
+
+        if not people:
+             try:
+                print(f"Searching Apollo Page {page}...")
+                resp = requests.post(APOLLO_API_URL, headers=headers, json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+                
+                # Set Cache
+                if redis_client and cache_key:
+                    redis_client.setex(cache_key, 86400, json.dumps(data)) # 24h TTL
+                    
+                people = data.get("people", [])
+             except Exception as e:
+                print(f"Apollo Search Error: {e}")
+                break
             
-            print(f"Page {page}: Fetched {len(people)} raw leads. Enriching via ThreadPool...")
+        if not people:
+             print("No more leads found in Apollo.")
+             break
+
+        print(f"Page {page}: Fetched {len(people)} raw leads. Enriching via ThreadPool...")
             
             # 3. Enrich Batch with Blitz (Parallel)
             leads_to_process = []
@@ -172,9 +205,11 @@ def fetch_and_enrich_leads(apollo_url, limit=100, skip_enrichment=False):
             page += 1
             time.sleep(1) # Paging delay
             
-        except Exception as e:
-            print(f"Apollo Search Error: {e}")
+        if len(verified_leads) >= limit:
             break
+
+        page += 1
+        time.sleep(1) # Paging delay
             
     print(f"Final Count: Found {len(verified_leads)} verified leads after scanning {total_scanned}.")
     return verified_leads[:limit]
