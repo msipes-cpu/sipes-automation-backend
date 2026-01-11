@@ -59,7 +59,7 @@ def fetch_and_enrich_leads(apollo_url, limit=100, skip_enrichment=False, mock_mo
         dummy_leads = []
         for i in range(min(limit, 10)): # Cap mock at 10 to be fast
             time.sleep(1) # Simulate work
-            print(f"[PROGRESS]: {i+1} / {min(limit, 10)}")
+            print(f"[PROGRESS]: {i+1}/{min(limit, 10)}")
             sys.stdout.flush()
             
             dummy_leads.append({
