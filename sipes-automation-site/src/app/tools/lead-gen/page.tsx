@@ -257,246 +257,234 @@ function LeadGenContent() {
                         </p>
                     </div>
 
-                    <div className="bg-white rounded-2xl shadow-xl border border-zinc-100 p-8">
-                        <div className="space-y-6">
+                    <div className="bg-white rounded-2xl shadow-xl p-6 md:p-10 border border-zinc-200">
 
-                            {/* URL Input */}
-                            <div>
-                                <label htmlFor="url" className="block text-sm font-medium text-zinc-700 mb-2">
-                                    Apollo Search URL
-                                </label>
-                                <input
-                                    id="url"
-                                    type="url"
-                                    required
-                                    placeholder="https://app.apollo.io/#/people?personTitles[]=ceo..."
-                                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
-                                    value={url}
-                                    onChange={(e) => setUrl(e.target.value)}
-                                />
-                                <p className="text-xs text-zinc-500 mt-2">
-                                    Copy the full URL from your browser address bar after applying filters in Apollo.
+                        {/* INPUT FORM - Hide when processing or done */}
+                        {(status === "idle" || status === "submitting" || status === "error") && (
+                            <>
+                                <div className="space-y-6">
+
+                                    {/* URL Input */}
+                                    <div>
+                                        <label htmlFor="url" className="block text-sm font-medium text-zinc-700 mb-2">
+                                            Apollo Search URL
+                                        </label>
+                                        <input
+                                            id="url"
+                                            type="url"
+                                            required
+                                            placeholder="https://app.apollo.io/#/people?personTitles[]=ceo..."
+                                            className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
+                                            value={url}
+                                            onChange={(e) => setUrl(e.target.value)}
+                                        />
+                                        <p className="text-xs text-zinc-500 mt-2">
+                                            Copy the full URL from your browser address bar after applying filters in Apollo.
+                                        </p>
+                                    </div>
+
+                                    {/* Email and Limit Row */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label htmlFor="email" className="block text-sm font-medium text-zinc-700 mb-2">
+                                                Notification Email
+                                            </label>
+                                            <input
+                                                id="email"
+                                                type="email"
+                                                required
+                                                placeholder="name@company.com"
+                                                className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
+                                                value={email}
+                                                onChange={(e) => setEmail(e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label htmlFor="limit" className="block text-sm font-medium text-zinc-700 mb-2">
+                                                Number of Leads
+                                            </label>
+                                            <input
+                                                id="limit"
+                                                type="number"
+                                                min="1"
+                                                max="10000"
+                                                required
+                                                className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
+                                                value={limit}
+                                                onChange={(e) => setLimit(parseInt(e.target.value))}
+                                            />
+                                            <p className="text-xs text-zinc-500 mt-2">
+                                                Estimated Cost: <span className="font-semibold text-green-600">${price.toFixed(2)}</span>
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Disclaimer */}
+                                    <Disclaimer onAckChange={setDisclaimerAccepted} />
+
+                                    {/* Action Buttons */}
+                                    <div className="pt-4 flex flex-col md:flex-row gap-4">
+                                        {/* Confirm & Pay Button */}
+                                        <button
+                                            onClick={() => handleStart(false)}
+                                            disabled={status === "submitting" || status === "processing" || !disclaimerAccepted}
+                                            className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-xl font-semibold text-white transition-all transform active:scale-[0.98]
+                                            ${status === "submitting" || status === "processing" || !disclaimerAccepted
+                                                    ? "bg-zinc-400 cursor-not-allowed"
+                                                    : "bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-blue-500/25"}
+                                        `}
+                                        >
+                                            {status === "submitting" || status === "processing" ? (
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                            ) : (
+                                                <CreditCard className="w-5 h-5" />
+                                            )}
+                                            Confirm & Pay (${price.toFixed(2)})
+                                        </button>
+
+                                        {/* Preview Button */}
+                                        <button
+                                            onClick={() => handlePreview()}
+                                            disabled={status === "submitting" || status === "processing" || previewLoading}
+                                            className={`flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-semibold transition-all transform active:scale-[0.98] border border-zinc-200
+                                            ${status === "submitting" || status === "processing" || previewLoading
+                                                    ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
+                                                    : "bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"}
+                                        `}
+                                        >
+                                            {previewLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                                            Preview 10
+                                        </button>
+
+                                        {/* Nah Button (Removed or moved to bottom if needed, sticking to design) */}
+                                        {/* Keeping Nah button but making it smaller/link if needed, or removing. User wanted previews. */}
+                                        {/* "After URL submission, show a free sample... Require payment to run the full batch." */}
+                                        {/* I'll keep Nah for now as a "Skip Payment" back door for the admin if they want it, but typically we'd hide it. */}
+                                        {/* Let's replace 'Nah' with 'Preview' for the main public UI, or put Preview alongside. */}
+                                        {/* The 'Nah' button was a debug tool. I'll replace it with 'Preview' as the 'Secondary Action'. */}
+                                    </div>
+
+                                    {/* Admin / Debug Bypass (Using a tiny link or hidden) */}
+                                    {/* For now, I'll just add the Preview button alongside. */}
+
+                                </div>
+                            </>
+                        )}
+
+
+                        {/* Preview Table */}
+                        {previewData.length > 0 && (
+                            <div className="mt-8 bg-white rounded-2xl shadow-xl border border-zinc-100 p-8 overflow-hidden">
+                                <h3 className="text-xl font-bold text-zinc-900 mb-4 flex items-center gap-2">
+                                    <CheckCircle className="w-5 h-5 text-green-600" />
+                                    Preview Results (First 10)
+                                </h3>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left text-zinc-600">
+                                        <thead className="text-xs text-zinc-700 uppercase bg-zinc-50">
+                                            <tr>
+                                                <th className="px-4 py-3 rounded-l-lg">Name</th>
+                                                <th className="px-4 py-3">Title</th>
+                                                <th className="px-4 py-3">Company</th>
+                                                <th className="px-4 py-3 rounded-r-lg">Verified Email</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {previewData.map((lead, idx) => (
+                                                <tr key={idx} className="bg-white border-b hover:bg-zinc-50">
+                                                    <td className="px-4 py-3 font-medium text-zinc-900">
+                                                        {lead.first_name} {lead.last_name}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        {lead.title || "-"}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        {lead.company || "-"}
+                                                    </td>
+                                                    <td className="px-4 py-3 font-mono text-xs text-blue-600">
+                                                        {lead.blitz_email || "Not Found"}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <p className="text-xs text-zinc-500 mt-4 text-center">
+                                    * Emails are partially masked for preview. Full verified emails included in purchase.
                                 </p>
                             </div>
+                        )}
 
-                            {/* Email and Limit Row */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label htmlFor="email" className="block text-sm font-medium text-zinc-700 mb-2">
-                                        Notification Email
-                                    </label>
-                                    <input
-                                        id="email"
-                                        type="email"
-                                        required
-                                        placeholder="name@company.com"
-                                        className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="limit" className="block text-sm font-medium text-zinc-700 mb-2">
-                                        Number of Leads
-                                    </label>
-                                    <input
-                                        id="limit"
-                                        type="number"
-                                        min="1"
-                                        max="10000"
-                                        required
-                                        className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
-                                        value={limit}
-                                        onChange={(e) => setLimit(parseInt(e.target.value))}
-                                    />
-                                    <p className="text-xs text-zinc-500 mt-2">
-                                        Estimated Cost: <span className="font-semibold text-green-600">${price.toFixed(2)}</span>
+                        {/* STATUS & VISUALS - Show exclusively when processing/done */}
+                        {(status === "processing" || status === "success" || (status === "error" && !url)) && (
+                            <div className="text-center py-10">
+                                {/* Status Header */}
+                                <div className="mb-8">
+                                    {status === "processing" && <Loader2 className="w-16 h-16 text-blue-600 animate-spin mx-auto mb-4" />}
+                                    {status === "success" && <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />}
+                                    {status === "error" && <AlertCircle className="w-16 h-16 text-red-600 mx-auto mb-4" />}
+
+                                    <h2 className="text-2xl font-bold text-zinc-900 mb-2">
+                                        {status === "processing" ? "Automation in Progress..." :
+                                            status === "success" ? "All Done! 🚀" : "Error Occurred"}
+                                    </h2>
+
+                                    <p className="text-zinc-600 max-w-md mx-auto">
+                                        {status === "processing" && "We are scraping Apollo, enriching emails, and verifying data. Watch the process below!"}
+                                        {status === "processing" && paymentSessionId && <span className="block mt-2 font-semibold text-blue-600">Payment Verified. Starting Job...</span>}
+                                        {status === "success" && "Your leads have been extracted, enriched, and saved."}
+                                        {status === "error" && (errorMsg || "Something went wrong.")}
                                     </p>
                                 </div>
+
+                                {/* Progress Bar */}
+                                {status === "processing" && (
+                                    <div className="max-w-xl mx-auto mb-8 bg-zinc-100 rounded-full h-4 overflow-hidden border border-zinc-200">
+                                        <div
+                                            className="bg-blue-600 h-full transition-all duration-700 ease-out"
+                                            style={{ width: `${progress}%` }}
+                                        ></div>
+                                    </div>
+                                )}
+                                {status === "processing" && (
+                                    <p className="text-sm font-semibold text-blue-600 mb-8">
+                                        {processedCount} / {totalCount} Verify Leads Found
+                                    </p>
+                                )}
+
+                                {/* Result Button */}
+                                {resultLink && (
+                                    <div className="mt-6 mb-12">
+                                        <a
+                                            href={resultLink}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 px-8 py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1"
+                                        >
+                                            <Download className="w-6 h-6" />
+                                            Open Google Sheet
+                                        </a>
+                                    </div>
+                                )}
+
+                                {/* Visual Process Diagram */}
+                                <div className="mt-12">
+                                    <ProcessVisual />
+                                </div>
+
+                                {/* Back Button */}
+                                {status === "success" && (
+                                    <button
+                                        onClick={() => window.location.href = '/tools/lead-gen'}
+                                        className="mt-12 text-zinc-500 hover:text-zinc-900 underline text-sm"
+                                    >
+                                        Start New Search
+                                    </button>
+                                )}
                             </div>
-
-                            {/* Disclaimer */}
-                            <Disclaimer onAckChange={setDisclaimerAccepted} />
-
-                            {/* Action Buttons */}
-                            <div className="pt-4 flex flex-col md:flex-row gap-4">
-                                {/* Confirm & Pay Button */}
-                                <button
-                                    onClick={() => handleStart(false)}
-                                    disabled={status === "submitting" || status === "processing" || !disclaimerAccepted}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-xl font-semibold text-white transition-all transform active:scale-[0.98]
-                                        ${status === "submitting" || status === "processing" || !disclaimerAccepted
-                                            ? "bg-zinc-400 cursor-not-allowed"
-                                            : "bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-blue-500/25"}
-                                    `}
-                                >
-                                    {status === "submitting" || status === "processing" ? (
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                    ) : (
-                                        <CreditCard className="w-5 h-5" />
-                                    )}
-                                    Confirm & Pay (${price.toFixed(2)})
-                                </button>
-
-                                {/* Preview Button */}
-                                <button
-                                    onClick={() => handlePreview()}
-                                    disabled={status === "submitting" || status === "processing" || previewLoading}
-                                    className={`flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-semibold transition-all transform active:scale-[0.98] border border-zinc-200
-                                        ${status === "submitting" || status === "processing" || previewLoading
-                                            ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
-                                            : "bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"}
-                                    `}
-                                >
-                                    {previewLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                                    Preview 10
-                                </button>
-
-                                {/* Nah Button (Removed or moved to bottom if needed, sticking to design) */}
-                                {/* Keeping Nah button but making it smaller/link if needed, or removing. User wanted previews. */}
-                                {/* The user prompt didn't say to remove "Nah", but "Preview" is better trust. I'll replace Nah with Preview or keep both? */}
-                                {/* "After URL submission, show a free sample... Require payment to run the full batch." */}
-                                {/* I'll keep Nah for now as a "Skip Payment" back door for the admin if they want it, but typically we'd hide it. */}
-                                {/* Let's replace 'Nah' with 'Preview' for the main public UI, or put Preview alongside. */}
-                                {/* The 'Nah' button was a debug tool. I'll replace it with 'Preview' as the 'Secondary Action'. */}
-                            </div>
-
-                            {/* Admin / Debug Bypass (Using a tiny link or hidden) */}
-                            {/* For now, I'll just add the Preview button alongside. */}
-
-                        </div>
+                        )}
                     </div>
-
-
-                    {/* Preview Table */}
-                    {previewData.length > 0 && (
-                        <div className="mt-8 bg-white rounded-2xl shadow-xl border border-zinc-100 p-8 overflow-hidden">
-                            <h3 className="text-xl font-bold text-zinc-900 mb-4 flex items-center gap-2">
-                                <CheckCircle className="w-5 h-5 text-green-600" />
-                                Preview Results (First 10)
-                            </h3>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left text-zinc-600">
-                                    <thead className="text-xs text-zinc-700 uppercase bg-zinc-50">
-                                        <tr>
-                                            <th className="px-4 py-3 rounded-l-lg">Name</th>
-                                            <th className="px-4 py-3">Title</th>
-                                            <th className="px-4 py-3">Company</th>
-                                            <th className="px-4 py-3 rounded-r-lg">Verified Email</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {previewData.map((lead, idx) => (
-                                            <tr key={idx} className="bg-white border-b hover:bg-zinc-50">
-                                                <td className="px-4 py-3 font-medium text-zinc-900">
-                                                    {lead.first_name} {lead.last_name}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    {lead.title || "-"}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    {lead.company || "-"}
-                                                </td>
-                                                <td className="px-4 py-3 font-mono text-xs text-blue-600">
-                                                    {lead.blitz_email || "Not Found"}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <p className="text-xs text-zinc-500 mt-4 text-center">
-                                * Emails are partially masked for preview. Full verified emails included in purchase.
-                            </p>
-                        </div>
-                    )}
-
-                    {/* Status Area */}
-                    {(status === "processing" || status === "success" || status === "error") && (
-                        <div className={`mt-8 p-6 rounded-xl border ${status === "success" ? "bg-green-50 border-green-200" :
-                            status === "error" ? "bg-red-50 border-red-200" :
-                                "bg-blue-50 border-blue-200"
-                            }`}>
-                            <div className="flex items-start gap-4">
-                                {status === "processing" && <Loader2 className="w-6 h-6 text-blue-600 animate-spin mt-1" />}
-                                {status === "success" && <CheckCircle className="w-6 h-6 text-green-600 mt-1" />}
-                                {status === "error" && <AlertCircle className="w-6 h-6 text-red-600 mt-1" />}
-
-                                <div className="flex-1">
-                                    <h3 className={`font-semibold text-lg mb-1 ${status === "success" ? "text-green-900" :
-                                        status === "error" ? "text-red-900" :
-                                            "text-blue-900"
-                                        }`}>
-                                        {status === "processing" ? "Enriching Leads..." :
-                                            status === "success" ? "Process Complete!" :
-                                                "Error Occurred"}
-                                    </h3>
-
-                                    <p className={`text-sm ${status === "success" ? "text-green-700" :
-                                        status === "error" ? "text-red-700" :
-                                            "text-blue-700"
-                                        }`}>
-                                        {status === "processing" && !paymentSessionId && `Processing leads... We are scraping Apollo, enriching emails, and verifying data.`}
-                                        {status === "processing" && paymentSessionId && `Payment Received! Waiting for job to start...`}
-                                        {status === "error" && (errorMsg || "Something went wrong. Please check your inputs.")}
-                                        {status === "success" && !resultLink && "Finished, but could not find the sheet link in logs."}
-                                    </p>
-
-                                    {/* Progress Bar */}
-                                    {status === "processing" && progress > 0 && (
-                                        <div className="mt-4">
-                                            <div className="flex justify-between text-xs font-semibold text-blue-700 mb-1">
-                                                <span>Verified Leads Found</span>
-                                                <span>
-                                                    {processedCount && totalCount ? `${processedCount} / ${totalCount}` : `${Math.round(progress)}%`}
-                                                </span>
-                                            </div>
-                                            <div className="w-full bg-blue-200 rounded-full h-2.5">
-                                                <div
-                                                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-out"
-                                                    style={{ width: `${progress}%` }}
-                                                ></div>
-                                            </div>
-                                            <div className="mt-2 text-xs text-blue-600">
-                                                <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-blue-200 mt-2">
-                                                    <p className="font-bold text-green-600 mb-1 flex items-center gap-1">
-                                                        <span className="text-lg">✉️</span> Link Sent to Email!
-                                                    </p>
-                                                    <p className="text-gray-600">
-                                                        We have sent the Google Sheet link to <strong>{email}</strong>.
-                                                        <br />
-                                                        You can safely <strong>close this page</strong> now. We will notify you when the job is fully done.
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {resultLink && (
-                                        <div className="mt-4">
-                                            <a
-                                                href={resultLink}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium shadow-md transition-colors"
-                                            >
-                                                <Download className="w-4 h-4" />
-                                                Open Google Sheet
-                                            </a>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
                 </div>
-
-                {/* VISUAL PROCESS & UPSELL */}
-                <div className="mt-20 max-w-6xl mx-auto">
-                    <ProcessVisual />
-                </div>
-            </div>
         </main>
     );
 }
