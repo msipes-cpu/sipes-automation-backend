@@ -304,35 +304,11 @@ def save_leads_to_db(leads):
     except Exception as e:
         print(f"DB Save Error: {e}")
 def run_orchestrator(apollo_url, target_email, limit=100):
-    enriched_leads = fetch_and_enrich_leads(apollo_url, limit)
+    # 1. Setup & Early Sheet Creation
+    print(f"Starting Job for: {target_email} (Limit: {limit})")
     
-    if not enriched_leads:
-        print("No enriched leads to export.")
-        return
-
-    # 4. Save to DB
-    save_leads_to_db(enriched_leads)
-
-    # 5. Export to Google Sheets
-    # Retrieve fieldnames
-    keys = set()
-    for l in enriched_leads:
-        keys.update(l.keys())
-    
-    # Custom Column Logic
-    unwanted = {'account', 'account_id', 'awards', 'email', 'organization_id', 'breadcrumbs'} 
-    
-    filtered_keys = [k for k in keys if k not in unwanted and k.lower() not in ['account', 'account id', 'awards']]
-
-    priority = ['first_name', 'last_name', 'blitz_email']
-    
-    remaining = [k for k in filtered_keys if k not in priority]
-    remaining.sort()
-    
-    fieldnames = priority + remaining
-    
-    # ... Export Logic (Gspread)
-    # Using existing logic flow but cleaned up
+    sheet_url = None
+    worksheet = None
     
     try:
         import gspread
@@ -351,8 +327,8 @@ def run_orchestrator(apollo_url, target_email, limit=100):
             if os.path.exists(SERVICE_ACCOUNT_FILE):
                 creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
             else:
-                print("Error: Google Credentials not found. Set GOOGLE_CREDENTIALS_JSON or provide credentials.json")
-                sys.exit(1)
+                print("Error: Google Credentials not found.")
+                return 
 
         if IMPERSONATE_EMAIL:
             creds = creds.with_subject(IMPERSONATE_EMAIL)
@@ -362,28 +338,74 @@ def run_orchestrator(apollo_url, target_email, limit=100):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         sheet_title = f"Apollo Leads - {timestamp}"
         sh = client.create(sheet_title)
+        sheet_url = sh.url
         
         if target_email:
             print(f"Sharing with {target_email}...")
             sh.share(target_email, perm_type='user', role='writer')
             
         worksheet = sh.get_worksheet(0)
-        rows = [fieldnames]
-        for lead in enriched_leads:
-            rows.append([str(lead.get(k, "")) for k in fieldnames])
-        worksheet.update(rows)
         
-        print(f"SUCCESS: Sheet created and shared.")
-        print(f"Sheet URL: {sh.url}")
-
-        if target_email:
-            send_email_notification(target_email, sh.url, len(enriched_leads))
+        # Determine Headers Early (Standard Set)
+        # We can refine this later, but setting basic headers is good UX
+        fieldnames = ['first_name', 'last_name', 'title', 'company', 'blitz_email', 'linkedin_url', 'location']
+        worksheet.update([fieldnames])
+        
+        print(f"Sheet Created: {sheet_url}")
         
     except Exception as e:
-        print(f"Export Error: {e}")
-        sys.exit(1)
+        print(f"Sheet Creation Error: {e}")
+        # Continue anyway? No, user expects sheet. But we can try to run and email csv later?
+        # For now, print error but proceed to enrichment so we don't lose the run.
+    
+    # 2. Notify User: Job Started
+    if target_email and sheet_url:
+        eta_minutes = int(limit / 200) + 2 # Rough estimate: 200 leads/min via turbo + overhead
+        send_email_notification(target_email, sheet_url, limit, status="STARTED", eta=eta_minutes)
 
-def send_email_notification(to_email, sheet_url, count):
+    # 3. Run Enrichment
+    enriched_leads = fetch_and_enrich_leads(apollo_url, limit)
+    
+    if not enriched_leads:
+        print("No enriched leads found.")
+        return
+
+    # 4. Save to DB
+    save_leads_to_db(enriched_leads)
+
+    # 5. Populate Sheet
+    if worksheet:
+        try:
+            # Dynamic Column Logic (to catch any extra fields)
+            keys = set()
+            for l in enriched_leads:
+                keys.update(l.keys())
+            
+            unwanted = {'account', 'account_id', 'awards', 'email', 'organization_id', 'breadcrumbs'} 
+            filtered_keys = [k for k in keys if k not in unwanted and k.lower() not in ['account', 'account id', 'awards']]
+            priority = ['first_name', 'last_name', 'blitz_email', 'title', 'company', 'linkedin_url']
+            remaining = [k for k in filtered_keys if k not in priority]
+            remaining.sort()
+            
+            final_fieldnames = priority + remaining
+            
+            rows = [final_fieldnames]
+            for lead in enriched_leads:
+                rows.append([str(lead.get(k, "")) for k in final_fieldnames])
+            
+            # Clear and Update
+            worksheet.clear()
+            worksheet.update(rows)
+            print("Sheet populated successfully.")
+            
+            # 6. Notify User: Job Complete
+            if target_email:
+                send_email_notification(target_email, sheet_url, len(enriched_leads), status="COMPLETED")
+                
+        except Exception as e:
+            print(f"Sheet Populating Error: {e}")
+
+def send_email_notification(to_email, sheet_url, count, status="COMPLETED", eta=None):
     sender = os.getenv('SENDER_EMAIL')
     password = os.getenv('SENDER_PASSWORD')
     server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
@@ -397,25 +419,41 @@ def send_email_notification(to_email, sheet_url, count):
         msg = MIMEMultipart()
         msg['From'] = f"Sipes Automation <{sender}>"
         msg['To'] = to_email
-        msg['Subject'] = f"Your Leads are Ready! ({count} Leads)"
         
-        html = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2>Your Leads are Ready! 🚀</h2>
-            <p>We successfully enriched <strong>{count}</strong> leads for you.</p>
-            <p>You can access your Google Sheet here:</p>
-            <p>
-                <a href="{sheet_url}" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-                    Open Google Sheet
-                </a>
-            </p>
-            <p>Or copy this link: <br>{sheet_url}</p>
-            <hr>
-            <p style="font-size: 12px; color: #666;">Sipes Automation Team</p>
-        </body>
-        </html>
-        """
+        if status == "STARTED":
+            msg['Subject'] = f"Lead Generation Statistics Started 🚀 (ETA: {eta} mins)"
+            html = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px;">
+                <h2>Lead Generation Started</h2>
+                <p>We are searching for <strong>{count}</strong> verified leads.</p>
+                <p><strong>Estimated Time:</strong> ~{eta} minutes.</p>
+                <p>Your Google Sheet has been created and will be populated automatically:</p>
+                <p>
+                    <a href="{sheet_url}" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                        Open Google Sheet
+                    </a>
+                </p>
+                <p>You can close the dashboard page now. We will email you again when it's done.</p>
+            </body>
+            </html>
+            """
+        else:
+            msg['Subject'] = f"Your Leads are Ready! ({count} Leads)"
+            html = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px;">
+                <h2>Your Leads are Ready! 🚀</h2>
+                <p>We successfully enriched <strong>{count}</strong> leads for you.</p>
+                <p>Access your sheet here:</p>
+                <p>
+                    <a href="{sheet_url}" style="background-color: #10b981; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                        View Final Results
+                    </a>
+                </p>
+            </body>
+            </html>
+            """
         
         msg.attach(MIMEText(html, 'html'))
         
@@ -423,11 +461,9 @@ def send_email_notification(to_email, sheet_url, count):
             s.starttls()
             s.login(sender, password)
             s.send_message(msg)
-        print(f"Email notification sent to {to_email}")
+        print(f"Email notification ({status}) sent to {to_email}")
     except Exception as e:
         print(f"Failed to send email: {e}")
-
-    # Cleanup
 
 
 if __name__ == "__main__":

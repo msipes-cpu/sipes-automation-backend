@@ -452,13 +452,16 @@ function LeadGenContent() {
                                                 ></div>
                                             </div>
                                             <div className="mt-2 text-xs text-blue-600">
-                                                <p className="italic">
-                                                    Enriching leads... this process verifies every single email.
-                                                    <span className="font-bold text-red-600 block mt-1">Please do not reload or close this page.</span>
-                                                </p>
-                                                <p className="mt-1 font-medium text-blue-800">
-                                                    We will email {email} with the link when complete.
-                                                </p>
+                                                <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-blue-200 mt-2">
+                                                    <p className="font-bold text-green-600 mb-1 flex items-center gap-1">
+                                                        <span className="text-lg">✉️</span> Link Sent to Email!
+                                                    </p>
+                                                    <p className="text-gray-600">
+                                                        We have sent the Google Sheet link to <strong>{email}</strong>.
+                                                        <br />
+                                                        You can safely <strong>close this page</strong> now. We will notify you when the job is fully done.
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
                                     )}
