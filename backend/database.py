@@ -12,6 +12,11 @@ check_same_thread = {"check_same_thread": False} if "sqlite" in DATABASE_URL els
 engine = create_engine(
     DATABASE_URL, connect_args=check_same_thread
 )
+
+# Debug: Print DB Connection
+safe_url = DATABASE_URL.split("@")[-1] if "@" in DATABASE_URL else "sqlite/local"
+print(f"[Database] Connecting to: ...{safe_url}")
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

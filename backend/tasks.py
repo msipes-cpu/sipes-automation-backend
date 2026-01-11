@@ -4,6 +4,9 @@ import subprocess
 import sys
 from datetime import datetime
 from typing import List, Dict
+from dotenv import load_dotenv
+
+load_dotenv()
 from backend.celery_app import celery_app
 from backend.database import SessionLocal
 from backend.models import Run, Log
@@ -17,6 +20,11 @@ def run_script_task(self, script_name: str, args: List[str], env_vars: Dict[str,
     """
     db = SessionLocal()
     
+    # Path resolution logic
+    # Ensure env vars are loaded in worker
+    from dotenv import load_dotenv
+    load_dotenv()
+
     # Sanitize script name
     safe_script_name = os.path.basename(script_name)
     script_path = os.path.join("/app/execution", safe_script_name)
@@ -78,6 +86,7 @@ def run_script_task(self, script_name: str, args: List[str], env_vars: Dict[str,
             
             # Print to worker logs
             sys.stdout.write(line)
+            sys.stdout.flush()
             
             # Log to DB
             try:

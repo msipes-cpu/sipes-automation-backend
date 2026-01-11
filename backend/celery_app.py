@@ -1,5 +1,8 @@
 import os
 from celery import Celery
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Default to local Redis if not set
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
