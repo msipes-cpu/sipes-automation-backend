@@ -13,6 +13,7 @@ import { StickyCTA } from "@/components/StickyCTA";
 import { CommonAutomations } from "@/components/CommonAutomations";
 import { SlideInLeadMagnet } from "@/components/SlideInLeadMagnet";
 import { Portfolio } from "@/components/Portfolio";
+import { Footer } from "@/components/Footer";
 
 export default function Home() {
   return (
@@ -34,15 +35,7 @@ export default function Home() {
       <SlideInLeadMagnet />
 
       {/* Footer */}
-      <footer className="py-12 border-t border-zinc-100 text-center text-zinc-500 text-sm bg-zinc-50">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p>© {new Date().getFullYear()} Sipes Automation. All rights reserved.</p>
-          <p className="flex items-center gap-2">
-            <span>Built in 48 hours.</span>
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </main>
   );
 }

@@ -21,6 +21,7 @@ export function Navbar() {
                     <Link href="#solution" className="hover:text-black transition-colors">The Solution</Link>
                     <Link href="#results" className="hover:text-black transition-colors">Results</Link>
                     <Link href="#faq" className="hover:text-black transition-colors">FAQ</Link>
+                    <Link href="/lead-gen" className="hover:text-black transition-colors">Free Lead Gen</Link>
                 </div>
 
                 <Link
