@@ -28,8 +28,12 @@ def send_email_notification(to_email: str, subject: str, html_body: str):
         msg.attach(MIMEText(html_body, 'html'))
 
         # Connect to SMTP Server
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
+        if smtp_port == 465:
+            server = smtplib.SMTP_SSL(smtp_server, smtp_port)
+        else:
+            server = smtplib.SMTP(smtp_server, smtp_port)
+            server.starttls()
+            
         server.login(smtp_email, smtp_password)
         text = msg.as_string()
         server.sendmail(smtp_email, to_email, text)
