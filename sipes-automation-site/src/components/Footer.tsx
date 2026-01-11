@@ -7,9 +7,9 @@ export function Footer() {
                 <p>© {new Date().getFullYear()} Sipes Automation. All rights reserved.</p>
 
                 <div className="flex items-center gap-6">
-                    <Link href="/tools" className="hover:text-zinc-900 transition-colors">
+                    {/* <Link href="/tools" className="hover:text-zinc-900 transition-colors">
                         Tools
-                    </Link>
+                    </Link> */}
                 </div>
 
                 <p className="flex items-center gap-2">
