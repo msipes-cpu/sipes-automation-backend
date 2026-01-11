@@ -420,37 +420,73 @@ def send_email_notification(to_email, sheet_url, count, status="COMPLETED", eta=
         msg['From'] = f"Sipes Automation <{sender}>"
         msg['To'] = to_email
         
+        # Common Marketing Footer
+        marketing_footer = """
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
+            <h3 style="color: #1e3a8a; margin-bottom: 10px;">Want to Automate Your Business?</h3>
+            <p style="color: #555; font-size: 14px; line-height: 1.5; margin-bottom: 20px;">
+                This tool saved you hours of manual work. Imagine what else we could automate for you.<br>
+                We build custom AI systems that scale your operations without scaling headcount.
+            </p>
+            <a href="https://calendly.com/sipes-automation/30min" style="display: inline-block; background-color: #111827; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                Book a Strategy Call
+            </a>
+            <p style="font-size: 12px; color: #999; margin-top: 20px;">
+                &copy; 2024 Sipes Automation. All rights reserved.
+            </p>
+        </div>
+        """
+
         if status == "STARTED":
-            msg['Subject'] = f"Lead Generation Statistics Started 🚀 (ETA: {eta} mins)"
+            msg['Subject'] = f"Lead Generation Started 🚀 (ETA: {eta} mins)"
             html = f"""
             <html>
-            <body style="font-family: Arial, sans-serif; padding: 20px;">
-                <h2>Lead Generation Started</h2>
-                <p>We are searching for <strong>{count}</strong> verified leads.</p>
-                <p><strong>Estimated Time:</strong> ~{eta} minutes.</p>
-                <p>Your Google Sheet has been created and will be populated automatically:</p>
-                <p>
-                    <a href="{sheet_url}" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            <body style="font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; max-width: 600px; margin: 0 auto; color: #333;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h2 style="color: #1e40af; font-size: 24px;">Your Job Has Started</h2>
+                </div>
+                
+                <div style="background-color: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 30px;">
+                    <p style="font-size: 16px; margin: 10px 0;"><strong>Target:</strong> {count} Verified Leads</p>
+                    <p style="font-size: 16px; margin: 10px 0;"><strong>Est. Time:</strong> ~{eta} minutes</p>
+                    <p style="font-size: 14px; color: #64748b; margin-top: 15px;">
+                        We've created your Google Sheet. It will populate automatically as we find leads.
+                    </p>
+                </div>
+
+                <div style="text-align: center; margin-bottom: 40px;">
+                    <a href="{sheet_url}" style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600;">
                         Open Google Sheet
                     </a>
-                </p>
-                <p>You can close the dashboard page now. We will email you again when it's done.</p>
+                </div>
+
+                {marketing_footer}
             </body>
             </html>
             """
         else:
-            msg['Subject'] = f"Your Leads are Ready! ({count} Leads)"
+            # COMPLETED
+            msg['Subject'] = f"Success! {count} Leads Ready 🎯"
             html = f"""
             <html>
-            <body style="font-family: Arial, sans-serif; padding: 20px;">
-                <h2>Your Leads are Ready! 🚀</h2>
-                <p>We successfully enriched <strong>{count}</strong> leads for you.</p>
-                <p>Access your sheet here:</p>
-                <p>
-                    <a href="{sheet_url}" style="background-color: #10b981; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-                        View Final Results
+            <body style="font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; max-width: 600px; margin: 0 auto; color: #333;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h2 style="color: #059669; font-size: 24px;">Lead Generation Complete!</h2>
+                </div>
+                
+                <div style="background-color: #f0fdf4; padding: 25px; border-radius: 12px; border: 1px solid #bbf7d0; margin-bottom: 30px; text-align: center;">
+                    <p style="font-size: 18px; margin-bottom: 10px;">We successfully enriched</p>
+                    <h1 style="font-size: 48px; color: #059669; margin: 0 0 20px 0; font-weight: 800;">{count}</h1>
+                    <p style="font-size: 16px; color: #166534;">Verified Leads</p>
+                </div>
+
+                <div style="text-align: center; margin-bottom: 40px;">
+                    <a href="{sheet_url}" style="background-color: #059669; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                        Access Your Leads
                     </a>
-                </p>
+                </div>
+
+                {marketing_footer}
             </body>
             </html>
             """

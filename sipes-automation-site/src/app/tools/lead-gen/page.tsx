@@ -485,8 +485,83 @@ function LeadGenContent() {
                     )}
 
                 </div>
+
+                {/* VISUAL PROCESS & UPSELL */}
+                <div className="mt-20 max-w-5xl mx-auto">
+
+                    <div className="text-center mb-16">
+                        <span className="bg-blue-100 text-blue-700 text-sm font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                            Under the Hood
+                        </span>
+                        <h2 className="text-3xl font-bold text-zinc-900 mt-4">
+                            How We Automate This For You
+                        </h2>
+                        <p className="text-lg text-zinc-600 mt-4 max-w-2xl mx-auto">
+                            This entire tool is an automated workflow connecting three powerful APIs. We build custom systems like this to replace manual data entry.
+                        </p>
+                    </div>
+
+                    {/* Diagram */}
+                    <div className="flex flex-col md:flex-row items-center justify-center gap-8 mb-20 relative">
+                        {/* Connecting Line (Desktop) */}
+                        <div className="hidden md:block absolute top-1/2 left-10 right-10 h-1 bg-zinc-200 -z-10 -translate-y-1/2"></div>
+
+                        <ProcessStep
+                            icon="🔍"
+                            title="1. Extraction"
+                            desc="We pull raw data from your Apollo Search URL via API."
+                        />
+                        <ProcessStep
+                            icon="⚡"
+                            title="2. Enrichment"
+                            desc="We verify every email with a waterfall of cleaning tools."
+                        />
+                        <ProcessStep
+                            icon="📊"
+                            title="3. Delivery"
+                            desc="We organize clean data into a Google Sheet instantly."
+                        />
+                    </div>
+
+                    {/* CTA Card */}
+                    <div className="bg-zinc-900 rounded-3xl p-12 text-center md:text-left relative overflow-hidden">
+                        {/* Abstract Background */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600 rounded-full blur-3xl opacity-20 -mr-20 -mt-20"></div>
+                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-600 rounded-full blur-3xl opacity-20 -ml-20 -mb-20"></div>
+
+                        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                            <div>
+                                <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
+                                    Want to automate your business?
+                                </h3>
+                                <p className="text-zinc-400 text-lg max-w-md">
+                                    Stop doing manual work. We build custom automation systems that scale with you.
+                                </p>
+                            </div>
+                            <a
+                                href="https://calendly.com/sipes-automation/30min"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-white text-zinc-900 px-8 py-4 rounded-xl font-bold text-lg hover:bg-zinc-100 transition-transform active:scale-95 shadow-xl"
+                            >
+                                Book a Strategy Call
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </main>
+    );
+}
+
+function ProcessStep({ icon, title, desc }: { icon: string, title: string, desc: string }) {
+    return (
+        <div className="bg-white p-6 rounded-2xl border border-zinc-100 shadow-lg w-full md:w-80 text-center relative z-10">
+            <div className="text-4xl mb-4">{icon}</div>
+            <h3 className="font-bold text-zinc-900 mb-2">{title}</h3>
+            <p className="text-sm text-zinc-600">{desc}</p>
+        </div>
     );
 }
 
