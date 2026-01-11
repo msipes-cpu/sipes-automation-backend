@@ -158,6 +158,40 @@ def list_runs(limit: int = 50, db: Session = Depends(get_db)):
     runs = db.query(Run).order_by(Run.start_time.desc()).limit(limit).all()
     return {"runs": runs}
 
+@app.get("/api/admin/runs")
+def list_admin_runs(admin_key: Optional[str] = None, limit: int = 100, db: Session = Depends(get_db)):
+    # Basic Security (Optional but recommended)
+    # env_admin_key = os.getenv("ADMIN_KEY")
+    # if env_admin_key and admin_key != env_admin_key:
+    #    raise HTTPException(status_code=403, detail="Unauthorized")
+
+    runs = db.query(Run).order_by(Run.start_time.desc()).limit(limit).all()
+    
+    # Enrich with parsed args for easy frontend display
+    enriched_runs = []
+    for r in runs:
+        run_dict = r.__dict__.copy()
+        run_dict.pop("_sa_instance_state", None)
+        
+        # Parse Args to extract useful metadata
+        meta = {}
+        try:
+            if r.args:
+                args = json.loads(r.args)
+                # args is list ["--url", "...", "--email", "..."]
+                if "--email" in args:
+                    meta['email'] = args[args.index("--email") + 1]
+                if "--limit" in args:
+                    meta['limit'] = args[args.index("--limit") + 1]
+                if "--url" in args:
+                    meta['url'] = args[args.index("--url") + 1]
+        except: pass
+        
+        run_dict['meta'] = meta
+        enriched_runs.append(run_dict)
+
+    return {"runs": enriched_runs}
+
 @app.get("/api/runs/{run_id}")
 def get_run_details(run_id: str, db: Session = Depends(get_db)):
     run = db.query(Run).filter(Run.run_id == run_id).first()
