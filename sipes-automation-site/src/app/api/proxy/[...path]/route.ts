@@ -75,6 +75,11 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
         const data = await backendRes.blob();
         const resHeaders = new Headers(backendRes.headers);
 
+        // Clean response headers to avoid browser/Next.js conflicts
+        resHeaders.delete("transfer-encoding");
+        resHeaders.delete("content-encoding");
+        resHeaders.delete("content-length");
+
         // Ensure CORS allows the frontend to read this (which it does by default for same-origin)
         return new NextResponse(data, {
             status: backendRes.status,

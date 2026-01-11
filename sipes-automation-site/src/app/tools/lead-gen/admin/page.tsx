@@ -47,20 +47,34 @@ export default function AdminDashboard() {
 
     const handleTestRun = async () => {
         if (!process.env.NEXT_PUBLIC_ADMIN_KEY) {
+            console.error("Missing NEXT_PUBLIC_ADMIN_KEY");
             alert("Admin Key not configured in frontend .env");
             return;
         }
+        const targetUrl = `${API_BASE_URL}/api/leads/test-run?admin_key=${process.env.NEXT_PUBLIC_ADMIN_KEY}`;
+        console.log("Testing Run with URL:", targetUrl);
+
         try {
-            const res = await fetch(`${API_BASE_URL}/api/leads/test-run?admin_key=${process.env.NEXT_PUBLIC_ADMIN_KEY}`, {
+            const res = await fetch(targetUrl, {
                 method: "POST"
             });
+            console.log("Fetch Status:", res.status, res.statusText);
+
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`Server returned ${res.status}: ${text}`);
+            }
+
             const data = await res.json();
+            console.log("Response Data:", data);
+
             if (data.run_id) {
                 window.location.href = `/tools/lead-gen?run_id=${data.run_id}`;
             } else {
                 alert("Failed to start test run: " + JSON.stringify(data));
             }
         } catch (e: any) {
+            console.error("Test Run Error:", e);
             alert("Error starting test run: " + e.message);
         }
     };
