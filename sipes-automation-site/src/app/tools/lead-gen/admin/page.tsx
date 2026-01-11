@@ -45,6 +45,26 @@ export default function AdminDashboard() {
         }
     };
 
+    const handleTestRun = async () => {
+        if (!process.env.NEXT_PUBLIC_ADMIN_KEY) {
+            alert("Admin Key not configured in frontend .env");
+            return;
+        }
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/leads/test-run?admin_key=${process.env.NEXT_PUBLIC_ADMIN_KEY}`, {
+                method: "POST"
+            });
+            const data = await res.json();
+            if (data.run_id) {
+                window.location.href = `/tools/lead-gen?run_id=${data.run_id}`;
+            } else {
+                alert("Failed to start test run: " + JSON.stringify(data));
+            }
+        } catch (e: any) {
+            alert("Error starting test run: " + e.message);
+        }
+    };
+
     // Initial Fetch & Poll
     useEffect(() => {
         fetchRuns();
@@ -69,6 +89,14 @@ export default function AdminDashboard() {
                         </div>
                         <div className="flex items-center gap-4 text-sm text-gray-500">
                             <span>Last updated: {lastRefresh.toLocaleTimeString()}</span>
+
+                            <button
+                                onClick={handleTestRun}
+                                className="bg-indigo-600 text-white px-3 py-1.5 rounded text-sm hover:bg-indigo-700 transition"
+                            >
+                                Run System Test (Free)
+                            </button>
+
                             <button
                                 onClick={fetchRuns}
                                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"

@@ -51,7 +51,31 @@ BLITZ_API_URL = "https://api.blitz-api.ai/api/enrichment/email"
 APOLLO_API_KEY = os.getenv("APOLLO_API_KEY")
 BLITZ_API_KEY = os.getenv("BLITZ_API_KEY")
 
-def fetch_and_enrich_leads(apollo_url, limit=100, skip_enrichment=False):
+def fetch_and_enrich_leads(apollo_url, limit=100, skip_enrichment=False, mock_mode=False):
+    if mock_mode:
+        print(f"[MOCK] Starting Fake Fetch for URL: {apollo_url}")
+        print(f"[MOCK] Generating {limit} dummy leads...")
+        
+        dummy_leads = []
+        for i in range(min(limit, 10)): # Cap mock at 10 to be fast
+            time.sleep(1) # Simulate work
+            print(f"[PROGRESS]: {i+1} / {min(limit, 10)}")
+            sys.stdout.flush()
+            
+            dummy_leads.append({
+                "first_name": f"TestUser{i}",
+                "last_name": "Doe",
+                "email": f"test.user.{i}@example.com",
+                "linkedin_url": f"https://linkedin.com/in/testuser{i}",
+                "company": "Test Corp Inc.",
+                "title": "Director of Testing",
+                "location": "New York, USA",
+                "keywords": "testing, qa, automation"
+            })
+            
+        print("[MOCK] Fetch complete.")
+        return dummy_leads
+
     print(f"Starting Fetch for URL: {apollo_url}")
     print(f"Target Verified Leads: {limit}")
 
@@ -303,12 +327,10 @@ def save_leads_to_db(leads):
             })
             
         with engine.connect() as conn:
-            conn.execute(insert(leads_table), db_leads)
-            conn.commit()
         print(f"Successfully saved {len(db_leads)} leads to DB.")
     except Exception as e:
         print(f"DB Save Error: {e}")
-def run_orchestrator(apollo_url, target_email, limit=100):
+def run_orchestrator(apollo_url, target_email, limit=100, mock_mode=False):
     # 1. Setup & Early Sheet Creation
     print(f"Starting Job for: {target_email} (Limit: {limit})")
     
@@ -341,7 +363,8 @@ def run_orchestrator(apollo_url, target_email, limit=100):
         client = gspread.authorize(creds)
         
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        sheet_title = f"Apollo Leads - {timestamp}"
+        prefix = "TEST RUN" if mock_mode else "Apollo Leads"
+        sheet_title = f"{prefix} - {timestamp}"
         sh = client.create(sheet_title)
         sheet_url = sh.url
         
@@ -360,16 +383,14 @@ def run_orchestrator(apollo_url, target_email, limit=100):
         
     except Exception as e:
         print(f"Sheet Creation Error: {e}")
-        # Continue anyway? No, user expects sheet. But we can try to run and email csv later?
-        # For now, print error but proceed to enrichment so we don't lose the run.
     
     # 2. Notify User: Job Started
     if target_email and sheet_url:
-        eta_minutes = int(limit / 200) + 2 # Rough estimate: 200 leads/min via turbo + overhead
+        eta_minutes = int(limit / 200) + 2 # Rough estimate
         send_email_notification(target_email, sheet_url, limit, status="STARTED", eta=eta_minutes)
 
     # 3. Run Enrichment
-    enriched_leads = fetch_and_enrich_leads(apollo_url, limit)
+    enriched_leads = fetch_and_enrich_leads(apollo_url, limit, mock_mode=mock_mode)
     
     if not enriched_leads:
         print("No enriched leads found.")
@@ -522,6 +543,12 @@ if __name__ == "__main__":
     parser.add_argument("--url", required=True)
     parser.add_argument("--email", required=True)
     parser.add_argument("--limit", type=int, default=100)
+    parser.add_argument("--mock", action="store_true", help="Enable test mode (mock data)")
     args = parser.parse_args()
     
-    run_orchestrator(args.url, args.email, args.limit)
+    # Handle mock URL
+    target_url = args.url
+    if args.mock:
+        target_url = "https://app.apollo.io/mock-test"
+    
+    run_orchestrator(target_url, args.email, args.limit, mock_mode=args.mock)
