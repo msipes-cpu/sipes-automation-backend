@@ -310,7 +310,8 @@ async def start_test_run(req: Request, admin_key: str):
         task = run_script_task.delay(
             script_name="lead_gen_orchestrator.py",
             args=["--url", "mock", "--email", safe_email, "--limit", "5", "--mock"],
-            env_vars={"RUN_ID": run_id, "DATABASE_URL": os.getenv("DATABASE_URL")}
+            env_vars={"RUN_ID": run_id, "DATABASE_URL": os.getenv("DATABASE_URL")},
+            run_id=run_id
         )
 
         return {"status": "ok", "run_id": run_id, "message": f"Test Run Started! Check email {safe_email}"}
