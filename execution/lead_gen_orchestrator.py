@@ -12,6 +12,9 @@ from sqlalchemy import create_engine, Table, MetaData, insert
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import redis
 import hashlib
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Import our modules
 # Assuming execution directory is in path or we are running from root
@@ -353,11 +356,58 @@ def run_orchestrator(apollo_url, target_email, limit=100):
         
         print(f"SUCCESS: Sheet created and shared.")
         print(f"Sheet URL: {sh.url}")
+
+        if target_email:
+            send_email_notification(target_email, sh.url, len(enriched_leads))
         
     except Exception as e:
         print(f"Export Error: {e}")
         sys.exit(1)
+
+def send_email_notification(to_email, sheet_url, count):
+    sender = os.getenv('SENDER_EMAIL')
+    password = os.getenv('SENDER_PASSWORD')
+    server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
+    port = int(os.getenv('SMTP_PORT', 587))
+    
+    if not sender or not password:
+        print("Skipping Email: SENDER_EMAIL or SENDER_PASSWORD not set.")
+        return
+
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = f"Sipes Automation <{sender}>"
+        msg['To'] = to_email
+        msg['Subject'] = f"Your Leads are Ready! ({count} Leads)"
         
+        html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2>Your Leads are Ready! 🚀</h2>
+            <p>We successfully enriched <strong>{count}</strong> leads for you.</p>
+            <p>You can access your Google Sheet here:</p>
+            <p>
+                <a href="{sheet_url}" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                    Open Google Sheet
+                </a>
+            </p>
+            <p>Or copy this link: <br>{sheet_url}</p>
+            <hr>
+            <p style="font-size: 12px; color: #666;">Sipes Automation Team</p>
+        </body>
+        </html>
+        """
+        
+        msg.attach(MIMEText(html, 'html'))
+        
+        with smtplib.SMTP(server, port) as s:
+            s.starttls()
+            s.login(sender, password)
+            s.send_message(msg)
+        print(f"Email notification sent to {to_email}")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
     # Cleanup
 
 

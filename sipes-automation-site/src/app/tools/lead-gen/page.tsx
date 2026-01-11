@@ -26,6 +26,8 @@ function LeadGenContent() {
     const [paymentSessionId, setPaymentSessionId] = useState<string | null>(null);
     const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
     const [progress, setProgress] = useState(0);
+    const [processedCount, setProcessedCount] = useState(0);
+    const [totalCount, setTotalCount] = useState(0);
     const [previewLoading, setPreviewLoading] = useState(false);
     const [previewData, setPreviewData] = useState<any[]>([]);
 
@@ -209,6 +211,8 @@ function LeadGenContent() {
                             const lastMatch = progressMatches[progressMatches.length - 1];
                             const current = parseInt(lastMatch[1]);
                             const total = parseInt(lastMatch[2]);
+                            setProcessedCount(current);
+                            setTotalCount(total);
                             if (total > 0) {
                                 setProgress((current / total) * 100);
                             }
@@ -437,7 +441,9 @@ function LeadGenContent() {
                                         <div className="mt-4">
                                             <div className="flex justify-between text-xs font-semibold text-blue-700 mb-1">
                                                 <span>Verified Leads Found</span>
-                                                <span>{Math.round(progress)}% ({limit ? Math.floor(progress / 100 * limit) : 0}/{limit})</span>
+                                                <span>
+                                                    {processedCount && totalCount ? `${processedCount} / ${totalCount}` : `${Math.round(progress)}%`}
+                                                </span>
                                             </div>
                                             <div className="w-full bg-blue-200 rounded-full h-2.5">
                                                 <div
@@ -445,14 +451,15 @@ function LeadGenContent() {
                                                     style={{ width: `${progress}%` }}
                                                 ></div>
                                             </div>
-                                            <p className="text-xs text-blue-600 mt-1 italic">
-                                                {limit && (
-                                                    <span className="font-semibold mr-1">
-                                                        Est. time: {Math.ceil(limit * 1.5) > 60 ? `~${Math.ceil((limit * 1.5) / 60)} mins` : `~${Math.ceil(limit * 1.5)} secs`}.
-                                                    </span>
-                                                )}
-                                                Enriching leads... this process verifies every single email. <span className="font-bold text-red-600 block mt-1">Please do not reload or close this page.</span>
-                                            </p>
+                                            <div className="mt-2 text-xs text-blue-600">
+                                                <p className="italic">
+                                                    Enriching leads... this process verifies every single email.
+                                                    <span className="font-bold text-red-600 block mt-1">Please do not reload or close this page.</span>
+                                                </p>
+                                                <p className="mt-1 font-medium text-blue-800">
+                                                    We will email {email} with the link when complete.
+                                                </p>
+                                            </div>
                                         </div>
                                     )}
 
