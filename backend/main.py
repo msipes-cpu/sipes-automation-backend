@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 # Load env vars (e.g. DATABASE_URL)
 load_dotenv()
 
+ADMIN_KEY = os.getenv("ADMIN_KEY")
+
 from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
