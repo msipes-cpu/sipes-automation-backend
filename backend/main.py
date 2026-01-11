@@ -64,6 +64,13 @@ async def startup_event():
         from sqlalchemy import text
         Base.metadata.create_all(bind=engine)
         
+        # Run Auto-Migrations (Column additions)
+        try:
+            from backend.database import run_migrations
+            run_migrations()
+        except Exception as e:
+            print(f"Migration Error: {e}")
+        
         # Auto-Migration for 'args' and 'env_vars' in 'runs' table
         with engine.connect() as conn:
             try:
