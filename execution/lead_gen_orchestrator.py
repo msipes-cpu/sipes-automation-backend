@@ -327,6 +327,8 @@ def save_leads_to_db(leads):
             })
             
         with engine.connect() as conn:
+            conn.execute(insert(leads_table), db_leads)
+            conn.commit()
         print(f"Successfully saved {len(db_leads)} leads to DB.")
     except Exception as e:
         print(f"DB Save Error: {e}")
