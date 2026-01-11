@@ -47,16 +47,22 @@ function LeadGenContent() {
         const success = searchParams.get("success");
         const sessionId = searchParams.get("session_id");
         const canceled = searchParams.get("canceled");
+        const runIdParam = searchParams.get("run_id");
 
         if (canceled) {
             setErrorMsg("Payment canceled.");
             setStatus("error");
             // Clear params
-            router.replace("/lead-gen");
+            router.replace("/tools/lead-gen");
         } else if (success === "true" && sessionId) {
             // Payment success! content
             setStatus("processing");
             setPaymentSessionId(sessionId);
+
+            if (runIdParam) {
+                setRunId(runIdParam);
+            }
+
             // Clear params to look clean
             router.replace("/lead-gen");
         }

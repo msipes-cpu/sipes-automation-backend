@@ -493,10 +493,20 @@ def send_email_notification(to_email, sheet_url, count, status="COMPLETED", eta=
         
         msg.attach(MIMEText(html, 'html'))
         
-        with smtplib.SMTP(server, port) as s:
-            s.starttls()
-            s.login(sender, password)
-            s.send_message(msg)
+        msg.attach(MIMEText(html, 'html'))
+        
+        if port == 465:
+            # SSL Connection
+            with smtplib.SMTP_SSL(server, port) as s:
+                s.login(sender, password)
+                s.send_message(msg)
+        else:
+            # TLS Connection (587)
+            with smtplib.SMTP(server, port) as s:
+                s.starttls()
+                s.login(sender, password)
+                s.send_message(msg)
+                
         print(f"Email notification ({status}) sent to {to_email}")
     except Exception as e:
         print(f"Failed to send email: {e}")
