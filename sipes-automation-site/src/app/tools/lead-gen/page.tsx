@@ -451,7 +451,7 @@ function LeadGenContent() {
                                                         Est. time: {Math.ceil(limit * 1.5) > 60 ? `~${Math.ceil((limit * 1.5) / 60)} mins` : `~${Math.ceil(limit * 1.5)} secs`}.
                                                     </span>
                                                 )}
-                                                Enriching leads... this process verifies every single email.
+                                                Enriching leads... this process verifies every single email. <span className="font-bold text-red-600 block mt-1">Please do not reload or close this page.</span>
                                             </p>
                                         </div>
                                     )}
