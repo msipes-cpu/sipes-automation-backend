@@ -137,76 +137,76 @@ def fetch_and_enrich_leads(apollo_url, limit=100, skip_enrichment=False):
 
         print(f"Page {page}: Fetched {len(people)} raw leads. Enriching via ThreadPool...")
             
-            # 3. Enrich Batch with Blitz (Parallel)
-            leads_to_process = []
-            for lead in people:
-                lid = lead.get('id')
-                if lid in seen_ids:
-                    continue
-                seen_ids.add(lid)
-                total_scanned += 1
-                leads_to_process.append(lead)
-                
-                if total_scanned > max_scan_limit:
-                    print("Hit Max Scan Limit (5x target). Stopping safety brake.")
-                    break
+        # 3. Enrich Batch with Blitz (Parallel)
+        leads_to_process = []
+        for lead in people:
+            lid = lead.get('id')
+            if lid in seen_ids:
+                continue
+            seen_ids.add(lid)
+            total_scanned += 1
+            leads_to_process.append(lead)
             
-            batch_verified = 0
-            
-            # Define helper for threading
-            def process_single_lead(lead_data):
-                l_new = lead_data.copy()
-                l_linkedin = l_new.get("linkedin_url")
-                l_email = None
-                
-                if skip_enrichment:
-                    l_email = l_new.get("email") or "preview@hidden.com"
-                elif l_linkedin:
-                    try:
-                        # minimal sleep for thread safety/rate matching
-                        time.sleep(0.1) 
-                        b_resp = requests.post(BLITZ_API_URL, headers=blitz_headers, json={"linkedin_profile_url": l_linkedin})
-                        if b_resp.status_code == 200:
-                            b_data = b_resp.json()
-                            l_email = b_data.get('work_email') or b_data.get('email')
-                            if not l_email and 'data' in b_data and isinstance(b_data['data'], dict):
-                                l_email = b_data['data'].get('work_email') or b_data['data'].get('email')
-                    except Exception as e:
-                        print(f"Enrich Error: {e}")
-                
-                if l_email and l_email.strip() and "unable" not in l_email.lower():
-                    l_new['blitz_email'] = l_email
-                    return l_new
-                return None
-
-            with ThreadPoolExecutor(max_workers=5) as executor:
-                futures = [executor.submit(process_single_lead, l) for l in leads_to_process]
-                
-                for future in as_completed(futures):
-                    result = future.result()
-                    if result:
-                        verified_leads.append(result)
-                        batch_verified += 1
-                        
-                        # Real-time Update (Approximate due to threading)
-                        if len(verified_leads) % 5 == 0 or len(verified_leads) >= limit:
-                            print(f"[PROGRESS]: {len(verified_leads)}/{limit}")
-                            sys.stdout.flush()
-
-                    if len(verified_leads) >= limit:
-                        # Cancel remaining? Hard with ThreadPool, just break loop
-                        break
-            
-            print(f"Batch Result: {batch_verified} verified leads found in this batch.")
-            
-            if len(verified_leads) >= limit:
+            if total_scanned > max_scan_limit:
+                print("Hit Max Scan Limit (5x target). Stopping safety brake.")
                 break
-
-            page += 1
-            time.sleep(1) # Paging delay
             
+        batch_verified = 0
+        
+        # Define helper for threading
+        def process_single_lead(lead_data):
+            l_new = lead_data.copy()
+            l_linkedin = l_new.get("linkedin_url")
+            l_email = None
+            
+            if skip_enrichment:
+                l_email = l_new.get("email") or "preview@hidden.com"
+            elif l_linkedin:
+                try:
+                    # minimal sleep for thread safety/rate matching
+                    time.sleep(0.1) 
+                    b_resp = requests.post(BLITZ_API_URL, headers=blitz_headers, json={"linkedin_profile_url": l_linkedin})
+                    if b_resp.status_code == 200:
+                        b_data = b_resp.json()
+                        l_email = b_data.get('work_email') or b_data.get('email')
+                        if not l_email and 'data' in b_data and isinstance(b_data['data'], dict):
+                            l_email = b_data['data'].get('work_email') or b_data['data'].get('email')
+                except Exception as e:
+                    print(f"Enrich Error: {e}")
+            
+            if l_email and l_email.strip() and "unable" not in l_email.lower():
+                l_new['blitz_email'] = l_email
+                return l_new
+            return None
+
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [executor.submit(process_single_lead, l) for l in leads_to_process]
+            
+            for future in as_completed(futures):
+                result = future.result()
+                if result:
+                    verified_leads.append(result)
+                    batch_verified += 1
+                    
+                    # Real-time Update (Approximate due to threading)
+                    if len(verified_leads) % 5 == 0 or len(verified_leads) >= limit:
+                        print(f"[PROGRESS]: {len(verified_leads)}/{limit}")
+                        sys.stdout.flush()
+
+                if len(verified_leads) >= limit:
+                    # Cancel remaining? Hard with ThreadPool, just break loop
+                    break
+        
+        print(f"Batch Result: {batch_verified} verified leads found in this batch.")
+        
         if len(verified_leads) >= limit:
             break
+
+        page += 1
+        time.sleep(1) # Paging delay
+        
+    if len(verified_leads) >= limit:
+        break
 
         page += 1
         time.sleep(1) # Paging delay
