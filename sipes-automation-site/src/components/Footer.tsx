@@ -7,8 +7,8 @@ export function Footer() {
                 <p>© {new Date().getFullYear()} Sipes Automation. All rights reserved.</p>
 
                 <div className="flex items-center gap-6">
-                    <Link href="/lead-gen" className="hover:text-zinc-900 transition-colors">
-                        Free Lead Gen
+                    <Link href="/tools" className="hover:text-zinc-900 transition-colors">
+                        Tools
                     </Link>
                 </div>
 
