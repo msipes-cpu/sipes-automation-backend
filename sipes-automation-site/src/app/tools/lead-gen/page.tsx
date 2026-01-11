@@ -215,8 +215,8 @@ function LeadGenContent() {
                         const match = fullLogText.match(/Sheet URL:\s*(https?:\/\/[^\s]+)/);
                         if (match) setResultLink(match[1]);
 
-                        // Check for Progress
-                        const progressMatches = [...fullLogText.matchAll(/\[PROGRESS\]: (\d+)\/(\d+)/g)];
+                        // Check for Progress (Allowing spaces for robustness)
+                        const progressMatches = [...fullLogText.matchAll(/\[PROGRESS\]:\s*(\d+)\s*\/\s*(\d+)/g)];
                         if (progressMatches.length > 0) {
                             const lastMatch = progressMatches[progressMatches.length - 1];
                             const current = parseInt(lastMatch[1]);
