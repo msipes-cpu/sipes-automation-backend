@@ -2,6 +2,11 @@ import os
 import json
 import uuid
 import stripe
+from dotenv import load_dotenv
+
+# Load env vars (e.g. DATABASE_URL)
+load_dotenv()
+
 from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
