@@ -227,6 +227,8 @@ function LeadGenContent() {
                                 setProgress((current / total) * 100);
                             }
                         }
+
+                        setLogs(newLogs); // Update logs state
                     }
 
                     if (runStatus === "COMPLETED") {
@@ -485,6 +487,14 @@ function LeadGenContent() {
                                         Start New Search
                                     </button>
                                 )}
+
+                                {/* Debug Logs */}
+                                <details className="mt-8 text-left max-w-2xl mx-auto">
+                                    <summary className="cursor-pointer text-zinc-400 hover:text-zinc-600 text-xs mb-2">View Debug Logs</summary>
+                                    <div className="bg-zinc-900 text-green-400 p-4 rounded-lg font-mono text-xs h-40 overflow-y-auto whitespace-pre-wrap text-left">
+                                        {logs.length > 0 ? logs.join("") : "Connecting to logger..."}
+                                    </div>
+                                </details>
                             </div>
                         )}
                     </div>
