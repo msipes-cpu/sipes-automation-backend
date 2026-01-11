@@ -5,8 +5,8 @@ import { useState, useEffect } from "react";
 import { Navbar } from "@/components/Navbar"; // Assuming Navbar component exists
 import { Loader2, RefreshCw, CheckCircle, XCircle, Clock, Database, Search } from "lucide-react";
 
-// Assuming backend URL logic same as main page
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// Use local proxy to bypass CORS
+const API_BASE_URL = "/api/proxy";
 
 interface Run {
     run_id: string;
