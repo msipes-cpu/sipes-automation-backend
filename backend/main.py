@@ -288,8 +288,8 @@ def create_checkout_session(request: LeadGenRequest, db: Session = Depends(get_d
                 'quantity': 1,
             }],
             mode='payment',
-            success_url=os.getenv("FRONTEND_URL", "https://www.sipesautomation.com/tools/lead-gen") + "?success=true&session_id={CHECKOUT_SESSION_ID}",
-            cancel_url=os.getenv("FRONTEND_URL", "https://www.sipesautomation.com/tools/lead-gen") + "?canceled=true",
+            success_url=f"{os.getenv('FRONTEND_URL', 'https://www.sipesautomation.com').rstrip('/')}/tools/lead-gen?success=true&session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{os.getenv('FRONTEND_URL', 'https://www.sipesautomation.com').rstrip('/')}/tools/lead-gen?canceled=true",
             metadata={
                 'run_id': run_id, # Pass reference instead of full data
                 'email': request.email, # Keep for quick reference in dashboard
