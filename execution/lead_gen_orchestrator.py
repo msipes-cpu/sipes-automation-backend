@@ -134,8 +134,8 @@ def fetch_and_enrich_leads(apollo_url, limit=100, skip_enrichment=False):
                         except: pass
                     return data.get("people", [])
                 elif resp.status_code == 429:
-                    print(f"Page {page_num} Rate Limited. Retrying...")
-                    time.sleep(2 * (attempt + 1))
+                    print(f"Page {page_num} Rate Limited (Apollo). Retrying in {5 * (attempt + 1)}s...")
+                    time.sleep(5 * (attempt + 1))
                 else:
                     return []
         except Exception as e:
@@ -147,7 +147,9 @@ def fetch_and_enrich_leads(apollo_url, limit=100, skip_enrichment=False):
     raw_leads = []
     seen_ids = set()
     
-    with ThreadPoolExecutor(max_workers=10) as executor: # 10 Concurrent Page Fetches
+    # User Concern: Apollo Rate Limits.
+    # Reduced workers from 10 -> 5 to be safe. Still 5x faster than sequential.
+    with ThreadPoolExecutor(max_workers=5) as executor: 
         future_to_page = {executor.submit(fetch_page, p): p for p in range(1, total_pages_needed + 1)}
         for future in as_completed(future_to_page):
             people = future.result()
