@@ -316,6 +316,7 @@ def preview_leads(request: LeadGenRequest):
         from execution.lead_gen_orchestrator import get_preview_leads
         leads = get_preview_leads(request.url)
         return {"leads": leads}
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 # --- Stripe ---
