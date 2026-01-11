@@ -17,19 +17,20 @@ export function Navbar() {
                     </span>
                 </Link>
 
-                <Link href="#solution" className="hover:text-black transition-colors">The Solution</Link>
-                <Link href="#results" className="hover:text-black transition-colors">Results</Link>
-                <Link href="#faq" className="hover:text-black transition-colors">FAQ</Link>
-                {/* <Link href="/tools" className="hover:text-black transition-colors">Tools</Link> */}
-            </div>
+                <div className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-500">
+                    <Link href="#solution" className="hover:text-black transition-colors">The Solution</Link>
+                    <Link href="#results" className="hover:text-black transition-colors">Results</Link>
+                    <Link href="#faq" className="hover:text-black transition-colors">FAQ</Link>
+                    {/* <Link href="/tools" className="hover:text-black transition-colors">Tools</Link> */}
+                </div>
 
-            <Link
-                href="https://cal.com/michael-sipes-qrtuxw/discovery-call"
-                className="bg-black text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-zinc-800 transition-all hover:shadow-lg"
-            >
-                Book a Call
-            </Link>
-        </div>
+                <Link
+                    href="https://cal.com/michael-sipes-qrtuxw/discovery-call"
+                    className="bg-black text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-zinc-800 transition-all hover:shadow-lg"
+                >
+                    Book a Call
+                </Link>
+            </div>
         </nav >
     );
 }
