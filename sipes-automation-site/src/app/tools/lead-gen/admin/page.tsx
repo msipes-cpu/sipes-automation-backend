@@ -86,6 +86,9 @@ export default function AdminDashboard() {
                         <div className="flex items-center gap-2">
                             <span className="text-xl font-bold text-gray-900">⚡ Sipes Auto Admin</span>
                             <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-medium">Internal</span>
+                            <span className="text-xs text-gray-400 font-mono ml-2 hidden md:block" title="Current API Target">
+                                [{API_BASE_URL}]
+                            </span>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-gray-500">
                             <span>Last updated: {lastRefresh.toLocaleTimeString()}</span>
