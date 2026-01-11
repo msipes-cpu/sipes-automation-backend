@@ -53,7 +53,7 @@ def run_script_task(self, script_name: str, args: List[str], env_vars: Dict[str,
         # Default to internal container network or localhost
         current_env["API_BASE_URL"] = "http://localhost:8000/api"
 
-    cmd = ["python3", script_path] + args
+    cmd = ["python3", "-u", script_path] + args
     print(f"[Celery] Starting: {' '.join(cmd)}")
 
     # Update Status to RUNNING
