@@ -67,7 +67,7 @@ export function ProcessVisual() {
                     {/* Nodes */}
                     <WorkflowNode
                         step="01"
-                        title="Extraction"
+                        title="Apollo"
                         icon={<Search className="w-5 h-5 text-purple-600 dark:text-purple-400" />}
                         desc="Fetches raw data from Apollo URL"
                         color="purple"
@@ -96,7 +96,7 @@ export function ProcessVisual() {
 
                     <WorkflowNode
                         step="03"
-                        title="Delivery"
+                        title="Google Sheets"
                         icon={<FileSpreadsheet className="w-5 h-5 text-green-600 dark:text-green-400" />}
                         desc="Compiles to Google Sheets"
                         color="green"
