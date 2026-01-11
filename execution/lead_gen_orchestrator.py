@@ -205,12 +205,7 @@ def fetch_and_enrich_leads(apollo_url, limit=100, skip_enrichment=False):
         page += 1
         time.sleep(1) # Paging delay
         
-    if len(verified_leads) >= limit:
-        break
 
-        page += 1
-        time.sleep(1) # Paging delay
-            
     print(f"Final Count: Found {len(verified_leads)} verified leads after scanning {total_scanned}.")
     return verified_leads[:limit]
 
