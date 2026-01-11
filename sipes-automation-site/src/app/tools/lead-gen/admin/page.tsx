@@ -38,7 +38,8 @@ export default function AdminDashboard() {
             setError("");
         } catch (err: any) {
             console.error(err);
-            setError(err.message || "Error fetching data");
+            // Show the URL we tried to help debug env var issues
+            setError(`Failed to load data from ${API_BASE_URL}. details: ${err.message}`);
         } finally {
             setLoading(false);
         }

@@ -205,6 +205,10 @@ def fetch_and_enrich_leads(apollo_url, limit=100, skip_enrichment=False):
     with ThreadPoolExecutor(max_workers=5) as executor:
         futures = []
         # Submit all raw leads? Or chunks? submitting all is fine for <5000
+        # Initial Progress Log
+        print(f"[PROGRESS]: 0/{limit}")
+        sys.stdout.flush()
+
         for lead in raw_leads:
             if len(verified_leads) >= limit: break # Pre-check, though futures launch fast
             futures.append(executor.submit(enrich_lead, lead))
@@ -218,7 +222,8 @@ def fetch_and_enrich_leads(apollo_url, limit=100, skip_enrichment=False):
                 verified_leads.append(result)
                 
                 # Report Progress
-                if len(verified_leads) % 5 == 0 or len(verified_leads) >= limit:
+                # More frequent updates for small batches
+                if limit < 50 or len(verified_leads) % 5 == 0 or len(verified_leads) >= limit:
                     print(f"[PROGRESS]: {len(verified_leads)}/{limit}")
                     sys.stdout.flush()
             
