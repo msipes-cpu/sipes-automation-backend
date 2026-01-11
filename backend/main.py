@@ -276,37 +276,50 @@ def process_apollo_url(request: LeadGenRequest, db: Session = Depends(get_db)):
 
 @app.post("/api/leads/test-run")
 async def start_test_run(req: Request, admin_key: str):
-    if admin_key != ADMIN_KEY:
-        raise HTTPException(status_code=403, detail="Invalid Admin Key")
+    import traceback
+    try:
+        if admin_key != ADMIN_KEY:
+            raise HTTPException(status_code=403, detail="Invalid Admin Key")
 
-    # Generate Run ID
-    run_id = f"test_{uuid.uuid4()}"
-    
-    # Create DB Entry
-    db = next(get_db())
-    new_run = Run(
-        run_id=run_id,
-        script_name="lead_gen_orchestrator.py",
-        status="submitting",
-        args=f"--mock", # Store that it was a mock
-        env_vars="{}"
-    )
-    db.add(new_run)
-    db.commit()
+        # Generate Run ID
+        run_id = f"test_{uuid.uuid4()}"
+        
+        # Create DB Entry
+        db = next(get_db())
+        try:
+            new_run = Run(
+                run_id=run_id,
+                script_name="lead_gen_orchestrator.py",
+                status="submitting",
+                args=f"--mock", # Store that it was a mock
+                env_vars="{}"
+            )
+            db.add(new_run)
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            raise Exception(f"DB Error: {str(e)}")
 
-    # Launch Celery Task
-    # We use a dummy URL and the admin's email (if we had it, but we'll use a placeholder or derived)
-    # Actually, let's ask for the email in the request body?
-    # For now, let's use a hardcoded safe email or the one from environment
-    safe_email = os.getenv("SENDER_EMAIL") # Send to self for test
+        # Launch Celery Task
+        safe_email = os.getenv("SENDER_EMAIL")
+        if not safe_email:
+            # Fallback for testing if env var missing
+            safe_email = "test@example.com"
+            print("WARNING: SENDER_EMAIL not set, using fallback.")
 
-    task = run_script_task.delay(
-        script_name="lead_gen_orchestrator.py",
-        args=["--url", "mock", "--email", safe_email, "--limit", "5", "--mock"],
-        env_vars={"RUN_ID": run_id, "DATABASE_URL": os.getenv("DATABASE_URL")}
-    )
+        task = run_script_task.delay(
+            script_name="lead_gen_orchestrator.py",
+            args=["--url", "mock", "--email", safe_email, "--limit", "5", "--mock"],
+            env_vars={"RUN_ID": run_id, "DATABASE_URL": os.getenv("DATABASE_URL")}
+        )
 
-    return {"status": "ok", "run_id": run_id, "message": f"Test Run Started! Check email {safe_email}"}
+        return {"status": "ok", "run_id": run_id, "message": f"Test Run Started! Check email {safe_email}"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_details = traceback.format_exc()
+        print(f"Test Run Error: {error_details}")
+        raise HTTPException(status_code=500, detail=f"Backend Error: {str(e)}")
 
 @app.post("/api/leads/preview")
 def preview_leads(request: LeadGenRequest):
