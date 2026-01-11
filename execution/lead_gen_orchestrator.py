@@ -81,135 +81,152 @@ def fetch_and_enrich_leads(apollo_url, limit=100, skip_enrichment=False):
         "x-api-key": BLITZ_API_KEY
     }
     
-    verified_leads = []
-    seen_ids = set()
-    page = 1
-    total_scanned = 0
-    max_scan_limit = limit * 5 # Safety brake: scan at most 5x target to find leads
-    
-    # Smart per_page - fetch a bit more than needed to reduce calls since some will fail enrichment
+    # Calculate pages needed
+    # Apollo returns 100 per page max if we set per_page=100
+    import math
     payload["per_page"] = 100 
     
-    while len(verified_leads) < limit and total_scanned < max_scan_limit:
+    # We fetch 2x the required count initially to account for leads without valid emails
+    # But for specialized enrichment, maybe 1.5x is enough. 
+    # Let's fetch enough pages to cover 'limit' assuming 50% hit rate safe bet? 
+    # Or just fetch exact pages first, then fetch more if needed?
+    # "Turbo mode" prefers fetching more upfront to avoid sequential round trips.
+    safety_multiplier = 2.0
+    target_fetch_count = int(limit * safety_multiplier)
+    total_pages_needed = math.ceil(target_fetch_count / 100)
+    # Cap at reasonable max (e.g. 100 pages = 10k leads)
+    if total_pages_needed > 100: total_pages_needed = 100
+    
+    print(f"Turbo Mode: Launching parallel fetch for {total_pages_needed} pages to find {limit} verified leads...")
+
+    # --- Helper: Fetch Single Page ---
+    def fetch_page(page_num):
+        local_payload = payload.copy()
+        local_payload["page"] = page_num
         
-        # 2. Search Apollo Batch
-        payload["page"] = page
-        
-        # Cache Check
-        people = []
-        cache_key = None
+        # Redis Cache Check
         redis_client = None
         redis_url = os.getenv("REDIS_URL")
+        cache_key = None
         
         if redis_url:
             try:
                 redis_client = redis.Redis.from_url(redis_url, decode_responses=True)
-                # Create a stable fingerprint of the payload
-                payload_str = json.dumps(payload, sort_keys=True)
+                payload_str = json.dumps(local_payload, sort_keys=True)
                 payload_hash = hashlib.sha256(payload_str.encode()).hexdigest()
                 cache_key = f"apollo_search:{payload_hash}"
                 
                 cached_data = redis_client.get(cache_key)
                 if cached_data:
-                    print(f"[CACHE] Hit for page {page}")
-                    data = json.loads(cached_data)
-                    people = data.get("people", [])
-            except Exception as e:
-                print(f"Redis Error: {e}")
-                redis_client = None
+                    return json.loads(cached_data).get("people", [])
+            except: pass
 
-        if not people:
-             try:
-                print(f"Searching Apollo Page {page}...")
-                resp = requests.post(APOLLO_API_URL, headers=headers, json=payload)
-                resp.raise_for_status()
-                data = resp.json()
-                
-                # Set Cache
-                if redis_client and cache_key:
-                    redis_client.setex(cache_key, 86400, json.dumps(data)) # 24h TTL
-                    
-                people = data.get("people", [])
-             except Exception as e:
-                print(f"Apollo Search Error: {e}")
-                break
-            
-        if not people:
-             print("No more leads found in Apollo.")
-             break
+        # API Request
+        try:
+            # Retry Check
+            for attempt in range(3):
+                resp = requests.post(APOLLO_API_URL, headers=headers, json=local_payload, timeout=15)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    # Cache Set
+                    if redis_client and cache_key:
+                        try: redis_client.setex(cache_key, 86400, json.dumps(data))
+                        except: pass
+                    return data.get("people", [])
+                elif resp.status_code == 429:
+                    print(f"Page {page_num} Rate Limited. Retrying...")
+                    time.sleep(2 * (attempt + 1))
+                else:
+                    return []
+        except Exception as e:
+            print(f"Error fetching page {page_num}: {e}")
+            return []
+        return []
 
-        print(f"Page {page}: Fetched {len(people)} raw leads. Enriching via ThreadPool...")
-            
-        # 3. Enrich Batch with Blitz (Parallel)
-        leads_to_process = []
-        for lead in people:
-            lid = lead.get('id')
-            if lid in seen_ids:
-                continue
-            seen_ids.add(lid)
-            total_scanned += 1
-            leads_to_process.append(lead)
-            
-            if total_scanned > max_scan_limit:
-                print("Hit Max Scan Limit (5x target). Stopping safety brake.")
-                break
-            
-        batch_verified = 0
+    # --- Step 2: Parallel Fetch ---
+    raw_leads = []
+    seen_ids = set()
+    
+    with ThreadPoolExecutor(max_workers=10) as executor: # 10 Concurrent Page Fetches
+        future_to_page = {executor.submit(fetch_page, p): p for p in range(1, total_pages_needed + 1)}
+        for future in as_completed(future_to_page):
+            people = future.result()
+            if people:
+                for p in people:
+                    pid = p.get('id')
+                    if pid not in seen_ids:
+                        seen_ids.add(pid)
+                        raw_leads.append(p)
+    
+    print(f"Fetched {len(raw_leads)} unique raw leads. Starting Parallel Enrichment...")
+
+    # --- Step 3: Parallel Enrichment ---
+    verified_leads = []
+    
+    def enrich_lead(lead_data):
+        l_new = lead_data.copy()
+        l_linkedin = l_new.get("linkedin_url")
+        l_email = None
         
-        # Define helper for threading
-        def process_single_lead(lead_data):
-            l_new = lead_data.copy()
-            l_linkedin = l_new.get("linkedin_url")
-            l_email = None
-            
-            if skip_enrichment:
-                l_email = l_new.get("email") or "preview@hidden.com"
-            elif l_linkedin:
+        if skip_enrichment:
+             l_email = l_new.get("email") or "preview@hidden.com"
+        elif l_linkedin:
+            # Backoff for Blitz
+            for attempt in range(3):
                 try:
-                    # minimal sleep for thread safety/rate matching
-                    time.sleep(0.1) 
-                    b_resp = requests.post(BLITZ_API_URL, headers=blitz_headers, json={"linkedin_profile_url": l_linkedin})
+                    b_resp = requests.post(BLITZ_API_URL, headers=blitz_headers, json={"linkedin_profile_url": l_linkedin}, timeout=10)
                     if b_resp.status_code == 200:
                         b_data = b_resp.json()
                         l_email = b_data.get('work_email') or b_data.get('email')
+                        
+                        # Fallback to data object
                         if not l_email and 'data' in b_data and isinstance(b_data['data'], dict):
                             l_email = b_data['data'].get('work_email') or b_data['data'].get('email')
-                except Exception as e:
-                    print(f"Enrich Error: {e}")
-            
-            if l_email and l_email.strip() and "unable" not in l_email.lower():
-                l_new['blitz_email'] = l_email
-                return l_new
-            return None
-
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            futures = [executor.submit(process_single_lead, l) for l in leads_to_process]
-            
-            for future in as_completed(futures):
-                result = future.result()
-                if result:
-                    verified_leads.append(result)
-                    batch_verified += 1
-                    
-                    # Real-time Update (Approximate due to threading)
-                    if len(verified_leads) % 5 == 0 or len(verified_leads) >= limit:
-                        print(f"[PROGRESS]: {len(verified_leads)}/{limit}")
-                        sys.stdout.flush()
-
-                if len(verified_leads) >= limit:
-                    # Cancel remaining? Hard with ThreadPool, just break loop
+                        break # Success
+                    elif b_resp.status_code == 429:
+                        time.sleep(1 * (attempt + 1)) # Lightweight backoff
+                    else:
+                        break # Fatal error for this lead
+                except:
                     break
         
-        print(f"Batch Result: {batch_verified} verified leads found in this batch.")
-        
-        if len(verified_leads) >= limit:
-            break
+        if l_email and l_email.strip() and "unable" not in l_email.lower():
+            l_new['blitz_email'] = l_email
+            return l_new
+        return None
 
-        page += 1
-        time.sleep(1) # Paging delay
-        
+    # High Concurrency for Enrichment
+    # User Request: Throttling to avoid 429s. Blitz Limit ~5 req/sec.
+    # We use 5 workers. Assuming each req takes >200ms, this is safe. 
+    # If reqs are faster, we might hit limits, but our backoff handles it.
+    
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = []
+        # Submit all raw leads? Or chunks? submitting all is fine for <5000
+        for lead in raw_leads:
+            if len(verified_leads) >= limit: break # Pre-check, though futures launch fast
+            futures.append(executor.submit(enrich_lead, lead))
+            
+        completed_count = 0
+        for future in as_completed(futures):
+            result = future.result()
+            completed_count += 1
+            
+            if result:
+                verified_leads.append(result)
+                
+                # Report Progress
+                if len(verified_leads) % 5 == 0 or len(verified_leads) >= limit:
+                    print(f"[PROGRESS]: {len(verified_leads)}/{limit}")
+                    sys.stdout.flush()
+            
+            # Interactive Break found?
+            if len(verified_leads) >= limit:
+                print("Hit target limit! Finishing pending tasks...")
+                # We stop processing new results we care about, effectively stopping.
+                break
 
-    print(f"Final Count: Found {len(verified_leads)} verified leads after scanning {total_scanned}.")
+    print(f"Final Count: Found {len(verified_leads)} verified leads.")
     return verified_leads[:limit]
 
 def get_preview_leads(apollo_url):
