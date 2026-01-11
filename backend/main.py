@@ -249,7 +249,7 @@ def preview_leads(request: LeadGenRequest):
 # --- Stripe ---
 
 @app.post("/api/create-checkout-session")
-def create_checkout_session(request: LeadGenRequest):
+def create_checkout_session(request: LeadGenRequest, db: Session = Depends(get_db)):
     if not stripe.api_key:
         raise HTTPException(status_code=500, detail="Stripe API Key not configured")
 
@@ -257,6 +257,22 @@ def create_checkout_session(request: LeadGenRequest):
         limit = request.limit or 100
         price_cents = int((limit / 1000) * 50)
         if price_cents < 50: price_cents = 50
+
+        # Create Run immediately (Pending Payment)
+        # This solves the Stripe Metadata 500 chars limit issue by storing the long URL in DB
+        run_id = str(uuid.uuid4())
+        args = ["--url", request.url, "--email", request.email, "--limit", str(limit)]
+        
+        new_run = Run(
+            run_id=run_id,
+            script_name="lead_gen_orchestrator.py",
+            status="PENDING_PAYMENT",
+            start_time=datetime.utcnow().isoformat(),
+            args=json.dumps(args),
+            env_vars=json.dumps({})
+        )
+        db.add(new_run)
+        db.commit()
 
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=['card'],
@@ -275,8 +291,8 @@ def create_checkout_session(request: LeadGenRequest):
             success_url=os.getenv("FRONTEND_URL", "https://sipes-automation-frontend-production.up.railway.app/lead-gen") + "?success=true&session_id={CHECKOUT_SESSION_ID}",
             cancel_url=os.getenv("FRONTEND_URL", "https://sipes-automation-frontend-production.up.railway.app/lead-gen") + "?canceled=true",
             metadata={
-                'apollo_url': request.url,
-                'email': request.email,
+                'run_id': run_id, # Pass reference instead of full data
+                'email': request.email, # Keep for quick reference in dashboard
                 'limit': str(limit)
             }
         )
@@ -304,12 +320,45 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
         metadata = session.get('metadata', {})
+        
+        # New Flow: Run ID passed
+        run_id = metadata.get('run_id')
+        
+        # Fallback Flow (Legacy): Data passed directly (will likely fail for long URLs anyway)
         apollo_url = metadata.get('apollo_url')
         email = metadata.get('email')
         limit = metadata.get('limit')
         
-        if apollo_url and email:
-            print(f"[Stripe] Payment received for {email}")
+        if run_id:
+            print(f"[Stripe] Payment received for Run ID: {run_id}")
+            # Find existing run
+            run = db.query(Run).filter(Run.run_id == run_id).first()
+            if run:
+                run.status = "QUEUED"
+                
+                # Retrieve args from DB to dispatch
+                args = json.loads(run.args)
+                env_vars = json.loads(run.env_vars) if run.env_vars else {}
+                
+                # Log Session ID
+                log_data = json.dumps({"session_id": session['id']})
+                new_log = Log(
+                    run_id=run_id,
+                    timestamp=datetime.utcnow().isoformat(),
+                    event_type="STRIPE_SESSION_ID",
+                    data=log_data
+                )
+                db.add(new_log)
+                db.commit()
+                
+                # Dispatch
+                run_script_task.delay("lead_gen_orchestrator.py", args, env_vars, run_id)
+                print(f"[Stripe] Job Resumed: {run_id}")
+            else:
+                 print(f"[Stripe] Error: Run ID {run_id} not found in DB.")
+
+        elif apollo_url and email:
+            print(f"[Stripe] Payment received for {email} (Legacy Flow)")
             run_id = str(uuid.uuid4())
             args = ["--url", apollo_url, "--email", email, "--limit", str(limit or 100)]
             
