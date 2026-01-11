@@ -327,14 +327,14 @@ function LeadGenContent() {
                                         {/* Confirm & Pay Button */}
                                         <button
                                             onClick={() => handleStart(false)}
-                                            disabled={status === "submitting" || status === "processing" || !disclaimerAccepted}
+                                            disabled={status === "submitting" || !disclaimerAccepted}
                                             className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-xl font-semibold text-white transition-all transform active:scale-[0.98]
-                                            ${status === "submitting" || status === "processing" || !disclaimerAccepted
+                                            ${status === "submitting" || !disclaimerAccepted
                                                     ? "bg-zinc-400 cursor-not-allowed"
                                                     : "bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-blue-500/25"}
                                         `}
                                         >
-                                            {status === "submitting" || status === "processing" ? (
+                                            {status === "submitting" ? (
                                                 <Loader2 className="w-5 h-5 animate-spin" />
                                             ) : (
                                                 <CreditCard className="w-5 h-5" />
@@ -345,9 +345,9 @@ function LeadGenContent() {
                                         {/* Preview Button */}
                                         <button
                                             onClick={() => handlePreview()}
-                                            disabled={status === "submitting" || status === "processing" || previewLoading}
+                                            disabled={status === "submitting" || previewLoading}
                                             className={`flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-semibold transition-all transform active:scale-[0.98] border border-zinc-200
-                                            ${status === "submitting" || status === "processing" || previewLoading
+                                            ${status === "submitting" || previewLoading
                                                     ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
                                                     : "bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"}
                                         `}
