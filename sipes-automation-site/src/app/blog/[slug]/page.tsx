@@ -1,6 +1,7 @@
 import { getPostBySlug, getAllPosts } from "@/lib/blog";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Calendar, Tag, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Metadata } from "next";
@@ -87,7 +88,7 @@ export default async function BlogPost({ params }: Props) {
 
                 {/* Content */}
                 <div className="prose prose-invert prose-lg max-w-none prose-headings:font-bold prose-a:text-blue-400 hover:prose-a:text-blue-300">
-                    <ReactMarkdown>{post.content}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
                 </div>
             </article>
         </div>
