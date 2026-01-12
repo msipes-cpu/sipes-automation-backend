@@ -54,6 +54,16 @@ export default async function BlogPost({ params }: Props) {
             <article className="px-6 max-w-4xl mx-auto pb-32">
                 {/* Header */}
                 <header className="mb-12 border-b border-zinc-800 pb-12">
+                    {post.coverImage && (
+                        <div className="mb-8 rounded-2xl overflow-hidden border border-zinc-800">
+                            <img
+                                src={post.coverImage}
+                                alt={post.title}
+                                className="w-full h-auto object-cover max-h-[500px]"
+                            />
+                        </div>
+                    )}
+
                     <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6 bg-gradient-to-r from-white to-gray-400 text-transparent bg-clip-text">
                         {post.title}
                     </h1>
