@@ -73,14 +73,17 @@ def update_client_sheet(client_data, spreadsheet_id):
             ])
         
         # 3. Account Health
-        account_header = ["Email", "Status", "Daily Limit", "Warmup Score"]
+        account_header = ["Email", "Status", "Daily Limit", "Warmup Score", "SPF", "DKIM", "DMARC"]
         account_rows = []
         for acc in client_data.get('accounts', []):
             account_rows.append([
                 acc.get('email', 'Unknown'),
                 acc.get('status', 'Unknown'),
                 acc.get('daily_limit', 0),
-                f"{acc.get('warmup_score', 'N/A')}"
+                f"{acc.get('warmup_score', 'N/A')}",
+                "PASS" if acc.get('spf_valid') else "FAIL",
+                "PASS" if acc.get('dkim_valid') else "FAIL",
+                "PASS" if acc.get('dmarc_valid') else "FAIL"
             ])
 
         # Batch Update Request

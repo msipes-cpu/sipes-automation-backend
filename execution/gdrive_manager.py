@@ -108,8 +108,11 @@ if __name__ == "__main__":
     try:
         service = get_drive_service()
         
+        # Use parent folder ID from env if available
+        parent_folder_id = os.getenv("GOOGLE_DRIVE_PARENT_ID")
+        
         # Find or create the folder
-        folder_id, folder_link = find_or_create_folder(service, args.folder_name)
+        folder_id, folder_link = find_or_create_folder(service, args.folder_name, parent_id=parent_folder_id)
         print(f"Folder ID: {folder_id}")
         print(f"Folder Link: {folder_link}")
         

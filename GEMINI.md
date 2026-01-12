@@ -38,6 +38,7 @@ Before writing a script, check `execution/` per your directive. Only create new 
 **4. User Preferences & Standards**
 - **Lead Lists**: ALWAYS output lead lists as **CSV** files.
 - **Naming Convention**: For lead lists, ALWAYS include a timestamp (e.g., `leads_source_YYYYMMDD_HHMM.csv`) to prevent overwriting and allow tracking.
+- **Google APIs**: ALWAYS use Service Account Impersonation (Domain-Wide Delegation) for creating Sheets/Drive files to avoid quota limits. See `directives/google_api_standards.md`.
 
 **3. Update directives as you learn**
 Directives are living documents. When you discover API constraints, better approaches, common errors, or timing expectations—update the directive. But don't create or overwrite directives without asking unless explicitly told to. Directives are your instruction set and must be preserved (and improved upon over time, not extemporaneously used and then discarded).
