@@ -20,7 +20,7 @@ Onboarding automation is one of the fastest ways for agencies and service busine
 | **What tools are commonly used?** | We often use platforms like Go High Level, Airtable, Zapier, Make.com, and custom integrations. |
 | **Where can I see more?** | We share broader strategy insights in our [Automation Agency Playbook](/blog/automation-agency-playbook). |
 
-<ROICalculatorPlaceholder />
+[[ROICalculator]]
 
 ## What Is Onboarding Automation And Why It Matters For Agencies
 

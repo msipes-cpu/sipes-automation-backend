@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { ROICalculator } from "@/components/ROICalculator";
 
 interface Props {
     params: Promise<{
@@ -105,7 +106,31 @@ export default async function BlogPost({ params }: Props) {
                     prose-code:text-blue-600 prose-code:bg-blue-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:font-medium prose-code:before:content-none prose-code:after:content-none
                     prose-ul:text-zinc-600 prose-li:marker:text-blue-300
                     prose-img:rounded-xl prose-img:shadow-lg prose-img:border prose-img:border-zinc-100">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
+                    <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                            // Custom renderer for the placeholder
+                            p: ({ node, children }) => {
+                                if (
+                                    children &&
+                                    typeof children === "string" &&
+                                    children.includes("[[ROICalculator]]")
+                                ) {
+                                    return <ROICalculator />;
+                                }
+                                if (Array.isArray(children)) {
+                                    // Handle cases where children is an array of strings/elements
+                                    const content = children.map(c => typeof c === 'string' ? c : '').join('');
+                                    if (content.includes("[[ROICalculator]]")) {
+                                        return <ROICalculator />;
+                                    }
+                                }
+                                return <p>{children}</p>;
+                            }
+                        }}
+                    >
+                        {post.content}
+                    </ReactMarkdown>
                 </div>
             </article>
 
