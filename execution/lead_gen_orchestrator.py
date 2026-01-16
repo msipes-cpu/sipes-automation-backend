@@ -356,8 +356,10 @@ def run_orchestrator(apollo_url, target_email, limit=100, mock_mode=False):
             if os.path.exists(SERVICE_ACCOUNT_FILE):
                 creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
             else:
-                print("Error: Google Credentials not found.")
-                return 
+            else:
+                print("Warning: Google Credentials not found. Skipping Google Sheet creation.")
+                sheet_url = None
+                creds = None 
 
         if IMPERSONATE_EMAIL:
             creds = creds.with_subject(IMPERSONATE_EMAIL)
