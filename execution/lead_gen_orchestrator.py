@@ -357,39 +357,39 @@ def run_orchestrator(apollo_url, target_email, limit=100, mock_mode=False):
                 creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
             else:
             else:
-                print("Warning: Google Credentials not found. Skipping Google Sheet creation.")
+                print("Google Credentials not found. Starting in CSV Download Mode.")
                 sheet_url = None
                 creds = None 
 
-        if IMPERSONATE_EMAIL:
-            creds = creds.with_subject(IMPERSONATE_EMAIL)
+        if IMPERSONATE_EMAIL and creds:
+             creds = creds.with_subject(IMPERSONATE_EMAIL)
             
-        client = gspread.authorize(creds)
-        
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        prefix = "TEST RUN" if mock_mode else "Apollo Leads"
-        sheet_title = f"{prefix} - {timestamp}"
-        sh = client.create(sheet_title)
-        sheet_url = sh.url
-        
-        if target_email:
-            print(f"Sharing with {target_email}...")
-            sh.share(target_email, perm_type='user', role='writer')
+        if creds:
+            client = gspread.authorize(creds)
             
-        worksheet = sh.get_worksheet(0)
-        
-        # Determine Headers Early (Standard Set)
-        # We can refine this later, but setting basic headers is good UX
-        fieldnames = ['first_name', 'last_name', 'title', 'company', 'blitz_email', 'linkedin_url', 'location']
-        worksheet.update([fieldnames])
-        
-        print(f"Sheet Created: {sheet_url}")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            prefix = "TEST RUN" if mock_mode else "Apollo Leads"
+            sheet_title = f"{prefix} - {timestamp}"
+            sh = client.create(sheet_title)
+            sheet_url = sh.url
+            
+            if target_email:
+                print(f"Sharing with {target_email}...")
+                sh.share(target_email, perm_type='user', role='writer')
+                
+            worksheet = sh.get_worksheet(0)
+            
+            # Determine Headers Early (Standard Set)
+            fieldnames = ['first_name', 'last_name', 'title', 'company', 'blitz_email', 'linkedin_url', 'location']
+            worksheet.update([fieldnames])
+            
+            print(f"Sheet Created: {sheet_url}")
         
     except Exception as e:
         print(f"Sheet Creation Error: {e}")
     
     # 2. Notify User: Job Started
-    if target_email and sheet_url:
+    if target_email:
         eta_minutes = int(limit / 200) + 2 # Rough estimate
         send_email_notification(target_email, sheet_url, limit, status="STARTED", eta=eta_minutes)
 
@@ -427,13 +427,13 @@ def run_orchestrator(apollo_url, target_email, limit=100, mock_mode=False):
             worksheet.clear()
             worksheet.update(rows)
             print("Sheet populated successfully.")
-            
-            # 6. Notify User: Job Complete
-            if target_email:
-                send_email_notification(target_email, sheet_url, len(enriched_leads), status="COMPLETED")
-                
+             
         except Exception as e:
             print(f"Sheet Populating Error: {e}")
+    
+    # 6. Notify User: Job Complete
+    if target_email:
+        send_email_notification(target_email, sheet_url, len(enriched_leads), status="COMPLETED")
 
 def send_email_notification(to_email, sheet_url, count, status="COMPLETED", eta=None):
     sender = os.getenv('SENDER_EMAIL')
@@ -444,6 +444,12 @@ def send_email_notification(to_email, sheet_url, count, status="COMPLETED", eta=
     if not sender or not password:
         print("Skipping Email: SENDER_EMAIL or SENDER_PASSWORD not set.")
         return
+
+    dashboard_url = "https://sa.sipesautomation.com/c/sipes/tools/apollo" # Default
+    # If sheet_url is missing, point to dashboard
+    action_url = sheet_url if sheet_url else dashboard_url
+    action_text = "Open Google Sheet" if sheet_url else "Download CSV from Dashboard"
+    action_color = "#2563eb" if sheet_url else "#0f172a" 
 
     try:
         msg = MIMEMultipart()
@@ -480,13 +486,13 @@ def send_email_notification(to_email, sheet_url, count, status="COMPLETED", eta=
                     <p style="font-size: 16px; margin: 10px 0;"><strong>Target:</strong> {count} Verified Leads</p>
                     <p style="font-size: 16px; margin: 10px 0;"><strong>Est. Time:</strong> ~{eta} minutes</p>
                     <p style="font-size: 14px; color: #64748b; margin-top: 15px;">
-                        We've created your Google Sheet. It will populate automatically as we find leads.
+                        {'We are creating your Google Sheet.' if sheet_url else 'We are enriching your leads. You can download the CSV from the dashboard when complete.'}
                     </p>
                 </div>
 
                 <div style="text-align: center; margin-bottom: 40px;">
-                    <a href="{sheet_url}" style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600;">
-                        Open Google Sheet
+                    <a href="{action_url}" style="background-color: {action_color}; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600;">
+                        {action_text}
                     </a>
                 </div>
 
@@ -511,8 +517,8 @@ def send_email_notification(to_email, sheet_url, count, status="COMPLETED", eta=
                 </div>
 
                 <div style="text-align: center; margin-bottom: 40px;">
-                    <a href="{sheet_url}" style="background-color: #059669; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                        Access Your Leads
+                    <a href="{action_url}" style="background-color: #059669; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                        {action_text}
                     </a>
                 </div>
 
