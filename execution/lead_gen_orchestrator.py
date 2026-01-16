@@ -76,15 +76,22 @@ def fetch_and_enrich_leads(apollo_url, limit=100, skip_enrichment=False, mock_mo
         print("[MOCK] Fetch complete.")
         return dummy_leads
 
-    print(f"Starting Fetch for URL: {apollo_url}")
+    display_url = apollo_url[:100] + "..." if len(apollo_url) > 100 else apollo_url
+    print(f"Starting Fetch for URL: {display_url}")
     print(f"Target Verified Leads: {limit}")
+    sys.stdout.flush()
 
     # 1. Parse URL
     print("Parsing URL...")
+    sys.stdout.flush()
+    
     payload = parse_apollo_url(apollo_url)
     if not payload:
         print("Error: Could not parse URL or URL is invalid.")
         return []
+        
+    print(f"Parsed Payload Keys: {list(payload.keys())}")
+    sys.stdout.flush()
 
     if not APOLLO_API_KEY:
         print("Error: APOLLO_API_KEY not set.")
