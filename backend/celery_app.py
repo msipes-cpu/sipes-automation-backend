@@ -13,7 +13,8 @@ if not REDIS_URL:
 
 celery_app = Celery(
     "sipes_automation_worker",
-    broker=REDIS_URL
+    broker=REDIS_URL,
+    include=['backend.tasks']
 )
 
 celery_app.conf.update(
