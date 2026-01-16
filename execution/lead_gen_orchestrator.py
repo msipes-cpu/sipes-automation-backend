@@ -356,7 +356,6 @@ def run_orchestrator(apollo_url, target_email, limit=100, mock_mode=False):
             if os.path.exists(SERVICE_ACCOUNT_FILE):
                 creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
             else:
-            else:
                 print("Google Credentials not found. Starting in CSV Download Mode.")
                 sheet_url = None
                 creds = None 
