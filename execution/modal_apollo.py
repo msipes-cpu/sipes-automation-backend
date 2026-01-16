@@ -18,7 +18,8 @@ image = modal.Image.debian_slim().pip_install(
     "google-auth-httplib2",
     "google-auth-oauthlib",
     "python-dotenv",
-    "pandas"
+    "pandas",
+    "fastapi"
 )
 
 # -----------------------------------------------------------------------------
@@ -345,7 +346,8 @@ def send_email_notification(to_email, attachment_path, apis):
 # -----------------------------------------------------------------------------
 # WEB ENDPOINT
 # -----------------------------------------------------------------------------
-@app.web_endpoint(method="POST")
+@app.function(image=image)
+@modal.fastapi_endpoint(method="POST")
 def trigger_enrichment(data: Dict):
     """
     Webhook to trigger the background job.

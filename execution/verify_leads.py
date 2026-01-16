@@ -14,7 +14,7 @@ load_dotenv()
 
 # API Keys and Endpoints
 MILLION_VERIFIER_API_KEY = os.getenv("MILLION_VERIFIER_API_KEY")
-MILLION_VERIFIER_URL = "https://api.millionverifier.com/api/v3/email/verify"
+MILLION_VERIFIER_URL = "https://api.millionverifier.com/api/v3/"
 
 BOUNCEBAN_API_KEY = os.getenv("BOUNCEBAN_API_KEY")
 BOUNCEBAN_URL = "https://api.bounceban.com/v1/verify/single"
@@ -25,13 +25,15 @@ REOON_URL = "https://emailverifier.reoon.com/api/v1/verify"
 ANYMAILFINDER_API_KEY = os.getenv("ANYMAILFINDER_API_KEY")
 ANYMAILFINDER_URL = "https://api.anymailfinder.com/v5.1/verify-email"
 
+STRICT_MODE = True # User requested strict Million Verifier only
+
 def verify_million_verifier(email: str, session=None) -> Dict[str, Any]:
     """Verifies email using Million Verifier."""
     if not MILLION_VERIFIER_API_KEY:
         return {"result": "skipped", "error": "MILLION_VERIFIER_API_KEY not set"}
 
     params = {
-        "api_key": MILLION_VERIFIER_API_KEY,
+        "api": MILLION_VERIFIER_API_KEY,
         "email": email,
         "timeout": 10
     }
@@ -44,6 +46,7 @@ def verify_million_verifier(email: str, session=None) -> Dict[str, Any]:
         return {"result": "error", "error": str(e)}
 
 def verify_bounceban(email: str, session=None) -> Dict[str, Any]:
+    # ... (unchanged) ...
     """Verifies email using BounceBan (good for catch-alls)."""
     if not BOUNCEBAN_API_KEY:
         return {"result": "skipped", "error": "BOUNCEBAN_API_KEY not set"}
@@ -62,6 +65,7 @@ def verify_bounceban(email: str, session=None) -> Dict[str, Any]:
         return {"result": "error", "error": str(e)}
 
 def verify_reoon(email: str, session=None) -> Dict[str, Any]:
+    # ... (unchanged) ...
     """Verifies email using Reoon."""
     if not REOON_API_KEY:
         return {"result": "skipped", "error": "REOON_API_KEY not set"}
@@ -81,6 +85,7 @@ def verify_reoon(email: str, session=None) -> Dict[str, Any]:
         return {"result": "error", "error": str(e)}
 
 def verify_anymailfinder(email: str, session=None) -> Dict[str, Any]:
+    # ... (unchanged) ...
     """Verifies email using Anymail Finder."""
     if not ANYMAILFINDER_API_KEY:
         return {"result": "skipped", "error": "ANYMAILFINDER_API_KEY not set"}
@@ -110,6 +115,9 @@ def verify_email_tiered(email: str, session=None) -> Dict[str, Any]:
     mv_result = verify_million_verifier(email, session=session)
     result_status = mv_result.get("result")
     
+    if result_status == 'ok':
+        result_status = 'safe'
+    
     final_result = {
         "email": email,
         "mv_status": result_status,
@@ -117,6 +125,10 @@ def verify_email_tiered(email: str, session=None) -> Dict[str, Any]:
         "final_status": result_status,
         "verification_source": "million_verifier"
     }
+
+    # IMPORTANT: If STRICT_MODE is on, we STOP here. No upgrading catch_alls.
+    if STRICT_MODE:
+        return final_result
 
     # If it's safe/invalid, we are done.
     # If catch_all, unknown, skipped, or error, try tier 2 (BounceBan/Reoon)

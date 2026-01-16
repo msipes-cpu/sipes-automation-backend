@@ -301,6 +301,9 @@ def main():
     verified_count = 0
     
     # Load exclusions
+    processed_ids = set()
+    processed_linkedin = set()
+    processed_emails = set()
     excluded_check_keys = set()
     if args.exclude_file and os.path.exists(args.exclude_file):
         log(f"Loading exclusions from {args.exclude_file}...")
@@ -332,21 +335,44 @@ def main():
                         lead_queue.task_done()
                         continue
                         
-                    # Exclusion check
-                    if lead.get("linkedin_url") in excluded_check_keys:
-                        lead_queue.task_done()
-                        continue
+                        # Deduplication Check (In-Memory)
+                        is_duplicate = False
+                        with log_lock:
+                            if lead.get("id") in processed_ids:
+                                is_duplicate = True
+                            elif lead.get("linkedin_url") and lead.get("linkedin_url") in processed_linkedin:
+                                is_duplicate = True
+                            else:
+                                if lead.get("id"):
+                                    processed_ids.add(lead.get("id"))
+                                if lead.get("linkedin_url"):
+                                    processed_linkedin.add(lead.get("linkedin_url"))
+                        
+                        if is_duplicate:
+                            lead_queue.task_done()
+                            continue
 
-                    try:
-                        res = enrich_and_verify(lead, global_session)
-                        if res and res["Verification Status"] == "safe":
-                            with log_lock:
-                                if verified_count < args.target:
-                                    writer.writerow(res)
-                                    f.flush()
-                                    verified_count += 1
-                                    if verified_count % 10 == 0:
-                                        print(f"Verified Leads: {verified_count}/{args.target}")
+                        try:
+                            # Exclusion check (File-based)
+                            if lead.get("linkedin_url") in excluded_check_keys:
+                                lead_queue.task_done()
+                                continue
+
+                            res = enrich_and_verify(lead, global_session)
+                            if res and res["Verification Status"] == "safe":
+                                with log_lock:
+                                    # Double check duplication on email just in case (though unlikely if ID/LinkedIn unique)
+                                    if res["Email"] in processed_emails:
+                                        lead_queue.task_done()
+                                        continue
+                                    processed_emails.add(res["Email"])
+
+                                    if verified_count < args.target:
+                                        writer.writerow(res)
+                                        f.flush()
+                                        verified_count += 1
+                                        if verified_count % 10 == 0:
+                                            print(f"Verified Leads: {verified_count}/{args.target}")
                     except Exception:
                         pass
                     finally:

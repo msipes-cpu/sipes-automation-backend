@@ -1,46 +1,57 @@
-# Lead Generation Waterfall Workflow
+# Lead Generation Waterfall Workflow (Strict Mode)
 
-> This directive outlines the process for sourcing leads via Apify and enriching them using a multi-provider waterfall methodology.
+> **Protocol Update (Jan 2026)**: We have moved to a custom **Apollo Universal Scraper** with a **Strict Smart Waterfall** strategy to maximize yield and eliminate bounces.
 
-## Inputs
-- **Sourcing Criteria**: Job Titles, Locations, Industries, etc.
-- **API Keys**: Apify, MillionVerifier, Datagma, Hunter, etc.
+## Core Component`execution/apollo_universal_scraper.py`
 
-## Tools
-- `execution/apify_lead_scraper.py`: Fetches leads from LinkedIn/SalesNav via Apify Actor `T1XDXWc1L92AfIJtd`.
-- `execution/waterfall_enrichment.py`: Enriches leads using Prospeo -> Datagma -> Hunter -> MillionVerifier.
+This script parses *any* Apollo Search URL and executes the following high-yield pipeline.
 
-## Workflow Steps
+## The Strict Smart Waterfall Flow
 
-0.  **Clarify Limit (Critical Protocol)**
-    - **Step 0a**: If the user did not specify a lead limit (e.g., "Get me 500 leads"), **YOU MUST ASK** before proceeding.
-    - **Reason**: Sourcing costs credits/money. Always confirm the volume.
+1.  **Apollo Lead Capture**:
+    - Fetches contacts from the provided Apollo Search URL.
+    - Handles pagination and complex filters (Funding, Tech Stack, etc.).
 
-1.  **Sourcing (Apify)**
-    - Run `execution/apify_lead_scraper.py` with your criteria.
-    - Example:
-      ```bash
-      python3 execution/apify_lead_scraper.py --job_titles "CEO" "Founder" --locations "United States" --limit 100 --output leads_raw.csv
-      ```
-    - **Output**: A raw CSV file containing LinkedIn profiles and potentially some emails.
+2.  **Primary Enrichment (Blitz)**:
+    - Uses the LinkedIn URL to find the email via **Blitz API**.
 
-2.  **Enrichment (Waterfall)**
-    - Run `execution/waterfall_enrichment.py` on the raw output.
-    - Example:
-      ```bash
-      python3 execution/waterfall_enrichment.py --input leads_raw.csv --output leads_enriched.csv
-      ```
-    - **Logic**:
-        - Checks if email exists & validates it.
-        - If invalid/missing, tries Datagma (with LinkedIn URL).
-        - If still missing, tries Hunter (with Domain).
-        - Validates all found emails with MillionVerifier.
-    - **Output**: Final CSV with `final_email`, `enrichment_source`, and `verification_status`.
+3.  **Strict Verification (Round 1)**:
+    - Verifies the Blitz email using **MillionVerifier**.
+    - **SAFE (`ok`)**: Kept. Lead secured.
+    - **INVALID**: **Discarded**. Triggers Fallback (Step 4).
+    - **CATCH-ALL/UNKNOWN**: **Discarded**. (Strict Mode rejects risk).
 
-3.  **Review**
-    - Open `leads_enriched.csv` to review the results.
-    - Filter for `verification_status` = "safe" for high-deliverability campaigns.
+4.  **Fallback Enrichment (AnyMail Finder)**:
+    - *Triggered ONLY if Blitz returned an INVALID email.*
+    - Searches for the email using `First Name` + `Last Name` + `Domain`.
 
-## Troubleshooting
-- **Missing API Keys**: Ensure `.env` has all required keys (`APIFY_API_TOKEN`, `DATAGMA_API_KEY`, etc.). The scripts will skip providers if keys are missing.
-- **Apify Limits**: Check your Apify console for run limits or credit usage if the sourcing step fails.
+5.  **Strict Verification (Round 2)**:
+    - Verifies the AnyMail Finder email using **MillionVerifier**.
+    - **SAFE (`ok`)**: Kept.
+    - **Anything else**: Discarded.
+
+## Usage
+
+### Standard High-Yield Run
+```bash
+python3 execution/apollo_universal_scraper.py \
+  --url "https://app.apollo.io/#/people?..." \
+  --niche "SaaS_CEOs" \
+  --target 5000 \
+  --threads 20 \
+  --fetch-workers 10
+```
+
+### Delta Recovery Run (Resume/Retry)
+Use this to recover "missed" leads without paying for duplicates.
+```bash
+python3 execution/apollo_universal_scraper.py \
+  --url "..." \
+  --niche "SaaS_Rescued" \
+  --target 5000 \
+  --exclude-file "PREVIOUS_RUN.csv"
+```
+
+## Key Configuration
+- **Strict Mode**: Enabled by default in `verify_leads.py`. Only allows `safe` emails.
+- **Smart Waterfall**: Enabled by default in `apollo_universal_scraper.py`.

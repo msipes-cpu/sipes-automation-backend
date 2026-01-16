@@ -260,21 +260,132 @@ def process_apollo_url(request: LeadGenRequest, db: Session = Depends(get_db)):
     run_id = str(uuid.uuid4())
     args = ["--url", request.url, "--email", request.email, "--limit", str(request.limit)]
     
+    # Fetch Workspace Keys
+    from backend.models import WorkspaceConfig
+    config = db.query(WorkspaceConfig).filter(WorkspaceConfig.workspace_id == request.email).first()
+    
+    env_vars = {}
+    if config:
+        if config.apollo_api_key: env_vars['APOLLO_API_KEY'] = config.apollo_api_key
+        if config.blitz_api_key: env_vars['BLITZ_API_KEY'] = config.blitz_api_key
+        if config.million_verifier_api_key: env_vars['MILLION_VERIFIER_API_KEY'] = config.million_verifier_api_key
+        if config.smartlead_api_key: env_vars['SMARTLEAD_API_KEY'] = config.smartlead_api_key
+    
     new_run = Run(
         run_id=run_id,
         script_name="lead_gen_orchestrator.py",
         status="QUEUED",
         start_time=datetime.utcnow().isoformat(),
         args=json.dumps(args),
-        env_vars=json.dumps({})
+        env_vars=json.dumps(env_vars)
     )
     db.add(new_run)
     db.commit()
 
     # Dispatch
-    run_script_task.delay("lead_gen_orchestrator.py", args, {}, run_id)
+    run_script_task.delay("lead_gen_orchestrator.py", args, env_vars, run_id)
 
     return {"status": "queued", "job": "lead_gen_orchestrator", "run_id": run_id}
+
+# --- Configuration Endpoints ---
+class ConfigUpdate(BaseModel):
+    workspace_id: str
+    apollo_api_key: Optional[str] = None
+    blitz_api_key: Optional[str] = None
+    million_verifier_api_key: Optional[str] = None
+    smartlead_api_key: Optional[str] = None
+
+@app.post("/api/config")
+def update_config(config: ConfigUpdate, db: Session = Depends(get_db)):
+    from backend.models import WorkspaceConfig
+    
+    # Upsert logic
+    existing = db.query(WorkspaceConfig).filter(WorkspaceConfig.workspace_id == config.workspace_id).first()
+    
+    if not existing:
+        existing = WorkspaceConfig(workspace_id=config.workspace_id)
+        db.add(existing)
+
+    if config.apollo_api_key is not None: existing.apollo_api_key = config.apollo_api_key
+    if config.blitz_api_key is not None: existing.blitz_api_key = config.blitz_api_key
+    if config.million_verifier_api_key is not None: existing.million_verifier_api_key = config.million_verifier_api_key
+    if config.smartlead_api_key is not None: existing.smartlead_api_key = config.smartlead_api_key
+    
+    db.commit()
+    return {"status": "updated"}
+
+@app.get("/api/config/{workspace_id}")
+def get_config(workspace_id: str, db: Session = Depends(get_db)):
+    from backend.models import WorkspaceConfig
+    config = db.query(WorkspaceConfig).filter(WorkspaceConfig.workspace_id == workspace_id).first()
+    
+    if not config:
+        return {}
+        
+    # Mask keys for security
+    def mask(key):
+        if not key or len(key) < 8: return key
+        return f"{key[:4]}...{key[-4:]}"
+
+    return {
+        "apollo_api_key": mask(config.apollo_api_key),
+        "blitz_api_key": mask(config.blitz_api_key),
+        "million_verifier_api_key": mask(config.million_verifier_api_key),
+        "smartlead_api_key": mask(config.smartlead_api_key),
+        "has_apollo": bool(config.apollo_api_key),
+        "has_blitz": bool(config.blitz_api_key),
+        "has_million_verifier": bool(config.million_verifier_api_key),
+        "has_smartlead": bool(config.smartlead_api_key)
+    }
+
+class TestConfigRequest(BaseModel):
+    service: str # apollo, blitz, million_verifier
+    api_key: str
+
+@app.post("/api/config/test")
+def test_config(req: TestConfigRequest):
+    import requests
+    
+    try:
+        if req.service == 'apollo':
+            # Simple health check endpoint for Apollo usually involves a small search or auth check
+            resp = requests.post("https://api.apollo.io/v1/auth/health", headers={
+                "Content-Type": "application/json",
+                "X-Api-Key": req.api_key
+            }, timeout=5)
+            # Apollo health check usually returns 200 and { is_logged_in: true } if valid
+            # Or we can just try a search with page 1 limit 1
+            if resp.status_code == 200: return {"status": "ok"}
+            # Fallback test: search
+            resp = requests.post("https://api.apollo.io/v1/mixed_people/search", headers={
+                "Content-Type": "application/json",
+                "X-Api-Key": req.api_key
+            }, json={"page": 1, "per_page": 1}, timeout=5)
+            if resp.status_code == 200: return {"status": "ok"}
+            return {"status": "error", "message": f"Apollo API Error: {resp.status_code}"}
+
+        elif req.service == 'blitz':
+            # Blitz usually needs a query to verify, or returns 401
+            # We can try enriching a dummy LinkedIn
+            resp = requests.post("https://api.blitz-api.ai/api/enrichment/email", headers={
+                 "Content-Type": "application/json",
+                 "x-api-key": req.api_key
+            }, json={"linkedin_profile_url": "https://linkedin.com/in/williamhgates"}, timeout=5)
+            
+            if resp.status_code == 200 or resp.status_code == 429: return {"status": "ok"} # 429 means key works but rate limited
+            if resp.status_code == 401 or resp.status_code == 403: return {"status": "error", "message": "Invalid API Key"}
+            return {"status": "ok"} # Other errors might be credits, but key is likely fine if not 401
+
+        elif req.service == 'million_verifier':
+             # https://api.millionverifier.com/api/v3/credits?api_key=...
+             resp = requests.get(f"https://api.millionverifier.com/api/v3/credits?api_key={req.api_key}", timeout=5)
+             if resp.status_code == 200: return {"status": "ok"}
+             return {"status": "error", "message": "Invalid API Key"}
+             
+        return {"status": "error", "message": "Unknown Service"}
+        
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @app.post("/api/leads/test-run")
 async def start_test_run(req: Request, admin_key: str):
@@ -350,13 +461,24 @@ def create_checkout_session(request: LeadGenRequest, db: Session = Depends(get_d
         run_id = str(uuid.uuid4())
         args = ["--url", request.url, "--email", request.email, "--limit", str(limit)]
         
+        # Fetch Workspace Keys (Stripe Flow)
+        from backend.models import WorkspaceConfig
+        config = db.query(WorkspaceConfig).filter(WorkspaceConfig.workspace_id == request.email).first()
+        
+        env_vars = {}
+        if config:
+            if config.apollo_api_key: env_vars['APOLLO_API_KEY'] = config.apollo_api_key
+            if config.blitz_api_key: env_vars['BLITZ_API_KEY'] = config.blitz_api_key
+            if config.million_verifier_api_key: env_vars['MILLION_VERIFIER_API_KEY'] = config.million_verifier_api_key
+            if config.smartlead_api_key: env_vars['SMARTLEAD_API_KEY'] = config.smartlead_api_key
+        
         new_run = Run(
             run_id=run_id,
             script_name="lead_gen_orchestrator.py",
             status="PENDING_PAYMENT",
             start_time=datetime.utcnow().isoformat(),
             args=json.dumps(args),
-            env_vars=json.dumps({})
+            env_vars=json.dumps(env_vars)
         )
         db.add(new_run)
         db.commit()
@@ -449,13 +571,22 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             run_id = str(uuid.uuid4())
             args = ["--url", apollo_url, "--email", email, "--limit", str(limit or 100)]
             
+            # Fetch Config for Legacy Flow too
+            from backend.models import WorkspaceConfig
+            config = db.query(WorkspaceConfig).filter(WorkspaceConfig.workspace_id == email).first()
+            env_vars = {}
+            if config:
+                if config.apollo_api_key: env_vars['APOLLO_API_KEY'] = config.apollo_api_key
+                if config.blitz_api_key: env_vars['BLITZ_API_KEY'] = config.blitz_api_key
+                if config.million_verifier_api_key: env_vars['MILLION_VERIFIER_API_KEY'] = config.million_verifier_api_key
+            
             new_run = Run(
                 run_id=run_id,
                 script_name="lead_gen_orchestrator.py",
                 status="QUEUED",
                 start_time=datetime.utcnow().isoformat(),
                 args=json.dumps(args),
-                env_vars=json.dumps({})
+                env_vars=json.dumps(env_vars)
             )
             db.add(new_run)
             
@@ -471,7 +602,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             db.commit()
             
             # Dispatch
-            run_script_task.delay("lead_gen_orchestrator.py", args, {}, run_id)
+            run_script_task.delay("lead_gen_orchestrator.py", args, env_vars, run_id)
             
             print(f"[Stripe] Job queued: {run_id}")
 

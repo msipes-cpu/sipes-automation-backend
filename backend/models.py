@@ -47,3 +47,13 @@ class Lead(Base):
     raw_data = Column(JSON, nullable=True)
 
     run = relationship("Run", back_populates="leads")
+
+class WorkspaceConfig(Base):
+    __tablename__ = "workspace_configs"
+    
+    workspace_id = Column(String, primary_key=True, index=True) # Mapped to user email
+    apollo_api_key = Column(String, nullable=True)
+    blitz_api_key = Column(String, nullable=True)
+    million_verifier_api_key = Column(String, nullable=True)
+    smartlead_api_key = Column(String, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
