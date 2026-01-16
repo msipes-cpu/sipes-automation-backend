@@ -45,15 +45,10 @@ app = FastAPI(title="Sipes Automation Backend", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    # Browsers reject "*" with allow_credentials=True. We must list specific origins.
-    allow_origins=[
-        "http://localhost:3000",
-        "https://sa.sipesautomation.com",
-        "https://www.sipesautomation.com",
-        "https://sipesautomation.com",
-        "https://client-portal-template-production.up.railway.app"
-    ],
-    allow_credentials=True,
+    # Simplify CORS: Allow all origins, no credentials.
+    # This avoids "Exact Origin" mismatch issues.
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
